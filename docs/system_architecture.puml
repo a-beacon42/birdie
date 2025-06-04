@@ -1,0 +1,28 @@
+@startuml birdie_system_architecture
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title "Birdie System Architecture"
+left footer Alex Beacon | %date("yyyy-MM-dd")
+
+Person(user, "User")
+
+System_Boundary(birdie_system, "Birdie System") {
+    Container(birdie, "Birdie\nApp", "React Native")
+    ContainerDb(birdie_db, "Birdie\nDatabase")
+}
+
+System_Boundary(internet, "Internet") {
+    Container(ebird, "eBird", "REST API")
+    Container(wiki, "Wikipedia")
+}
+
+Rel(user, birdie, "studies bird ID")
+Rel_R(birdie, birdie_db, "loads bird Flashcard data")
+Rel(birdie_db, ebird, "gets species data")
+Rel(birdie_db, wiki, "gets bird picture")
+
+SHOW_LEGEND()
+
+@enduml
