@@ -4,17 +4,17 @@ import Button from "../components/Button";
 import RadioButton from "../components/RadioButton";
 import Dropdown from "../components/Dropdown";
 import allCountries from "../data/AllCountries.json";
-import { getUniqueFamilies } from "../services/BirdsService";
+import { Family, getUniqueFamilies } from "../services/BirdsService";
 import { createGame } from "../services/CreateGameService";
 import {
     getSubnational1Regions,
     getSubnational2Regions,
 } from "../api/ebirdAPI";
 
-type Family = {
-    famComName: string;
-    famComNameCode: string;
-};
+// type Family = {
+//     famComName: string;
+//     famComNameCode: string;
+// };
 
 type Country = {
     name: string;
@@ -87,6 +87,16 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ setGameBirds }) => 
         }
     };
 
+    const handleClearFilters = () => {
+        setBirdsNumber("25");
+        setSelectedFamily("");
+        setSelectedCountry("");
+        setSelectedStateProvince("");
+        setSelectedCountyRegion("");
+        setAllSubnational1([]);
+        setAllSubnational2([]);
+    };
+
     return (
         <View style={styles.container}>
             <Text
@@ -150,11 +160,12 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ setGameBirds }) => 
                 dropdownLabel={"Family"}
                 dropdownData={uniqueFamilies}
                 labelField={"famComName"}
-                valueField={"famComNameCode"}
+                valueField={"famNameCode"}
                 placeholder={"Select a family"}
                 selectedValue={selectedFamily}
                 onSelect={(item: Family) => {
-                    setSelectedFamily(item.famComNameCode);
+                    console.log("Selected family:", item);
+                    setSelectedFamily(item.famNameCode);
                 }}
             />
             <View
@@ -211,7 +222,10 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ setGameBirds }) => 
                     }}
                 />
             )}
-            <Button title="create game" onClick={handleCreateGame} />
+            <>
+                <Button title="create game" onClick={handleCreateGame} />
+                <Button title="reset filters" onClick={handleClearFilters} />
+            </>
         </View>
     );
 };

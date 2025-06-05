@@ -1,16 +1,14 @@
 import birdsDataRaw from "../data/BirdsData.json";
 const birdsData = birdsDataRaw as Bird[];
 
-// Define data types
 export interface Bird {
-  speciesCode: string;
   sppCode: string;
   famComName: string;
-  famComNameCode: string;
+  famNameCode: string;
   [key: string]: any;
 }
 export interface Family {
-  famComNameCode: string;
+  famNameCode: string;
   famComName: string;
 }
 
@@ -26,13 +24,13 @@ export const getRandomBirds = (sppCodes: string[], count: number): Bird[] => {
   return randomBirds;
 };
 
-export const getBirdsByFamily = (famComNameCode: string): Bird[] => {
-  return birdsData.filter((bird: Bird) => bird.famComNameCode === famComNameCode);
+export const getBirdsByFamily = (famNameCode: string): Bird[] => {
+  return birdsData.filter((bird: Bird) => bird.famNameCode === famNameCode);
 };
 
-export const getSppCodesByFamily = (famComNameCode: string): string[] => {
+export const getSppCodesByFamily = (famNameCode: string): string[] => {
   return birdsData
-    .filter((bird: Bird) => bird.famComNameCode === famComNameCode)
+    .filter((bird: Bird) => bird.famNameCode === famNameCode)
     .map((bird: Bird) => bird.sppCode);
 };
 
@@ -41,9 +39,9 @@ export const getUniqueFamilies = (): Family[] => {
     acc: Family[],
     bird: Bird
   ) => {
-    if (!acc.some((family: Family) => family.famComNameCode === bird.famComNameCode)) {
+    if (!acc.some((family: Family) => family.famNameCode === bird.famNameCode)) {
       acc.push({
-        famComNameCode: bird.famComNameCode,
+        famNameCode: bird.famNameCode,
         famComName: bird.famComName,
       });
     }
