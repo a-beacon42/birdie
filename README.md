@@ -63,20 +63,14 @@ A cross-platform mobile application built with **Expo** and **React Native** usi
 ├─ docs/               # Documentation & diagrams
 └─ src/                # Application source code
    ├─ App.tsx          # Root component
+   ├─ @types           # Type definitions
+   ├─ api              # External API connectors
    ├─ components/      # Reusable UI components
    ├─ data/            # Mock or static data
    ├─ hooks/           # Custom React hooks
+   ├─ services/        # Business logic and data services (e.g., API calls, storage, authentication)
    └─ screens/         # Screen components
 ```
-
-## Linting & Formatting
-
-- ESLint is configured via `eslint.config.js`.
-- Prettier is used for code formatting. 
-- Run:
-  ```bash
-  npm run lint
-  ```
 
 ## Contributing
 
