@@ -11,11 +11,6 @@ import {
     getSubnational2Regions,
 } from "../api/ebirdAPI";
 
-// type Family = {
-//     famComName: string;
-//     famComNameCode: string;
-// };
-
 type Country = {
     name: string;
     code: string;
