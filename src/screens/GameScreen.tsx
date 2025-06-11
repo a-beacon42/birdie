@@ -4,14 +4,14 @@ import FlashCard from "../components/FlashCard";
 import Button from "../components/Button";
 
 interface GameScreenProps {
-  birds: any[];  
+  birds: any[];
   setGameBirds: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 const GameScreen: React.FC<GameScreenProps> = ({ birds, setGameBirds }) => {
   const [currentBirdIndex, setCurrentBirdIndex] = useState<number>(0);
   const gameBirds = birds;
-
+  
   const handlePrevBird = () => {
     setCurrentBirdIndex((prev) =>
       (prev + gameBirds.length - 1) % gameBirds.length
@@ -34,23 +34,23 @@ const GameScreen: React.FC<GameScreenProps> = ({ birds, setGameBirds }) => {
   return (
     <View style={styles.container}>
       <FlashCard
-        imageSource={gameBirds[currentBirdIndex].imageSource}
-        commonName={gameBirds[currentBirdIndex].commonName}
+        imageSource={{uri: gameBirds[currentBirdIndex].imageUrl}}
+        commonName={gameBirds[currentBirdIndex].comName}
         latinName={gameBirds[currentBirdIndex].latinName}
       />
 
       <View style={styles.buttonRow}>
-        <Button title="Prev Bird" onClick={handlePrevBird} />
-        <Button title="Next Bird" onClick={handleNextBird} />
+        <Button title="previous" onClick={handlePrevBird} />
+        <Button title="next" onClick={handleNextBird} />
       </View>
 
       <View style={styles.buttonRow}>
         <Button
-          title="Restart Game"
+          title="restart"
           onClick={handleRestartGame}
           isDisabled={currentBirdIndex === 0}
         />
-        <Button title="End Game" onClick={handleEndGame} />
+        <Button title="end" onClick={handleEndGame} />
       </View>
     </View>
   );

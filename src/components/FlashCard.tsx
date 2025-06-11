@@ -8,7 +8,7 @@ interface FlashCardProps {
   style?: StyleProp<ViewStyle>;
 }
 
-const FlashCard: React.FC<FlashCardProps> = ({ imageSource, commonName, latinName, style }) => {
+const FlashCard: React.FC<FlashCardProps> = ({ imageSource, commonName, latinName }) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const [flipped, setFlipped] = useState(false);
 
@@ -32,7 +32,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ imageSource, commonName, latinNam
 
   return (
     <TouchableWithoutFeedback onPress={flipCard}>
-      <View style={[styles.container, style]}>         
+      <View style={[styles.container ]}>         
         <Animated.View style={[styles.card, styles.cardFront, { transform: [{ rotateY: frontInterpolate }] }]}>          
           <Image source={imageSource} style={styles.image} resizeMode="cover" />
         </Animated.View>
