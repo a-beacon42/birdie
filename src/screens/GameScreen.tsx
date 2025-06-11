@@ -34,6 +34,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ birds, setGameBirds }) => {
   return (
     <View style={styles.container}>
       <FlashCard
+        key={currentBirdIndex}
         imageSource={{uri: gameBirds[currentBirdIndex].imageUrl}}
         commonName={gameBirds[currentBirdIndex].comName}
         latinName={gameBirds[currentBirdIndex].latinName}

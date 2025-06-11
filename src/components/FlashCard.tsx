@@ -66,6 +66,9 @@ const styles = StyleSheet.create({
   },
   cardFront: {
     backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
   },
   cardBack: {
     backgroundColor: '#fff',
