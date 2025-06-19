@@ -22,14 +22,14 @@ export default Button;
 const styles = StyleSheet.create({
   button: {
     backgroundColor: colors.blue,
-    padding: 10,
+    padding: 15,
     margin: 10,
     borderRadius: 5,
     alignItems: "center",
   },
   disabledButton: {
     backgroundColor: "gray",
-    padding: 10,
+    padding: 15,
     margin: 10,
     borderRadius: 5,
     alignItems: "center",

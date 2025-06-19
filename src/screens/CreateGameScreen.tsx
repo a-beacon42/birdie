@@ -217,10 +217,10 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ setGameBirds }) => 
                     }}
                 />
             )}
-            <>
+            <View style={styles.buttonRow}>
                 <Button title="create game" onClick={handleCreateGame} />
                 <Button title="reset filters" onClick={handleClearFilters} />
-            </>
+            </View>
         </View>
     );
 };
@@ -233,6 +233,10 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         backgroundColor: "#fff",
         paddingHorizontal: 10,
+    },
+    buttonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-evenly',
     },
 });
 
