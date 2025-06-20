@@ -11,6 +11,7 @@ interface GameScreenProps {
 const GameScreen: React.FC<GameScreenProps> = ({ birds, setGameBirds }) => {
   const [currentBirdIndex, setCurrentBirdIndex] = useState<number>(0);
   const gameBirds = birds;
+  const deckSize = birds.length;
 
   const handlePrevBird = () => {
     setCurrentBirdIndex((prev) =>
@@ -38,6 +39,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ birds, setGameBirds }) => {
         imageSource={{ uri: gameBirds[currentBirdIndex].imageUrl }}
         commonName={gameBirds[currentBirdIndex].comName}
         latinName={gameBirds[currentBirdIndex].sciName}
+        cardPosition={`${currentBirdIndex + 1} / ${deckSize}`}
       />
 
       <View style={styles.buttonRow}>

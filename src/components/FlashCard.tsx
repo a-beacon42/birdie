@@ -7,10 +7,11 @@ interface FlashCardProps {
   imageSource: { uri: string } | number;
   commonName: string;
   latinName: string;
+  cardPosition: string;
   style?: StyleProp<ViewStyle>;
 }
 
-const FlashCard: React.FC<FlashCardProps> = ({ imageSource, commonName, latinName }) => {
+const FlashCard: React.FC<FlashCardProps> = ({ imageSource, commonName, latinName, cardPosition }) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const [flipped, setFlipped] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
@@ -38,10 +39,12 @@ const FlashCard: React.FC<FlashCardProps> = ({ imageSource, commonName, latinNam
       <TouchableWithoutFeedback onPress={flipCard}>
         <View style={[styles.container]}>
           <Animated.View style={[styles.card, styles.cardFront, { transform: [{ rotateY: frontInterpolate }] }]}>
+            <Text style={styles.positionIndicator}>{cardPosition}</Text>
             <Image source={imageSource} style={styles.image} resizeMode="cover" />
           </Animated.View>
 
           <Animated.View style={[styles.card, styles.cardBack, { transform: [{ rotateY: backInterpolate }] }]}>
+            <Text style={styles.positionIndicator}>{cardPosition}</Text>
             <Image source={imageSource} style={styles.image} resizeMode="cover" />
             <View style={styles.textContainer}>
               <Text style={styles.commonName}>{commonName}</Text>
@@ -88,6 +91,7 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '70%',
+    paddingTop: 10,
   },
   textContainer: {
     alignItems: 'center',
@@ -113,5 +117,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  positionIndicator: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    color: '#fff',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    fontSize: 12,
+    fontWeight: 'bold',
+    zIndex: 1,
   },
 });
