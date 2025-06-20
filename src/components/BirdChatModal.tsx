@@ -15,7 +15,7 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
     useEffect(() => {
         if (visible) {
             const initConversation = async () => {
-                const systemMsg: ChatMessage = { role: 'system', content: 'You are an expert ornithologist who specializes in field identification. You only talk about birds.' };
+                const systemMsg: ChatMessage = { role: 'system', content: 'You are an expert ornithologist who specializes in field identification. You only talk about birds. All responses must be under 250 words.' };
                 const userMsg: ChatMessage = { role: 'user', content: `What are the key identifiers for ${commonName}?` };
                 setMessages([systemMsg, userMsg]);
                 try {
@@ -37,6 +37,7 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
         const newUserMsg: ChatMessage = { role: 'user', content: input.trim() };
         const convo = [...messages, newUserMsg];
         setMessages(convo);
+        console.log(`BirdChatModal.handleSend\n\t"${convo.map(msg => `${msg.content} -- ${msg.role}`).join(' ')}"`);
         setInput('');
         try {
             const reply = await sendBirdChatMessage(convo);

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Animated, StyleSheet, View, Text, Image, TouchableWithoutFeedback, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 import BirdChatModal from './BirdChatModal';
+import colors from "../../assets/colors";
 
 interface FlashCardProps {
   imageSource: { uri: string } | number;
@@ -47,7 +48,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ imageSource, commonName, latinNam
               <Text style={styles.latinName}>{latinName}</Text>
             </View>
             <TouchableOpacity onPress={(e) => { e.stopPropagation(); setChatVisible(true); }} style={styles.chatButton}>
-              <Text style={styles.chatButtonText}>Chat</Text>
+              <Text style={styles.chatButtonText}>?</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -61,8 +62,8 @@ export default FlashCard;
 
 const styles = StyleSheet.create({
   container: {
-    width: 200,
-    height: 300,
+    width: 350,
+    height: 400,
   },
   card: {
     position: 'absolute',
@@ -99,11 +100,10 @@ const styles = StyleSheet.create({
   latinName: {
     fontSize: 14,
     fontStyle: 'italic',
-    // color: '#555',
   },
   chatButton: {
     marginTop: 10,
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.purple,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 5,
@@ -112,5 +112,6 @@ const styles = StyleSheet.create({
   chatButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: 'bold',
   },
 });
