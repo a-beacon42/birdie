@@ -38,9 +38,15 @@ export const createGame = async (
     ? await getSppCodesByFamily(selectedFamily)
     : [];
 
-  const sppCodes: string[] = sppCodesByFamily.filter((sppCode) =>
-    sppCodesByRegion.includes(sppCode)
-  );
+  let sppCodes: string[];
+
+  if (sppCodesByFamily.length > 0 && sppCodesByRegion.length > 0) {
+    sppCodes = sppCodesByFamily.filter(sppCode => sppCodesByRegion.includes(sppCode));
+  } else if (sppCodesByFamily.length > 0) {
+    sppCodes = sppCodesByFamily;
+  } else {
+    sppCodes = sppCodesByRegion;
+  }
 
   if (sppCodes.length === 0) {
     return {
