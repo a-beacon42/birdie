@@ -10,6 +10,7 @@ import {
     getSubnational1Regions,
     getSubnational2Regions,
 } from "../api/ebirdAPI";
+import colors from "../../assets/colors";
 
 type Country = {
     name: string;
@@ -93,81 +94,26 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ setGameBirds }) => 
     };
 
     return (
-        <View style={styles.container}>
-            <Text
-                style={{
-                    fontWeight: "bold",
-                    fontSize: 24,
-                    color: "purple",
-                    paddingVertical: 5,
-                }}
-            >
-                Create New Game
-            </Text>
-            <View
-                style={{ flexDirection: "row", alignItems: "center", paddingTop: 10 }}
-            >
-                <View style={{ flex: 1, height: 1, backgroundColor: "purple" }} />
+        <View style={{ justifyContent: "center", marginTop: 50 }}>
+            <View style={styles.container}>
                 <Text
                     style={{
-                        textAlign: "center",
-                        paddingHorizontal: 4,
+                        fontWeight: "bold",
+                        fontSize: 24,
                         color: "purple",
+                        paddingVertical: 5,
                     }}
                 >
-                    Number of flashcards
+                    Create New Game
                 </Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: "purple" }} />
-            </View>
-            <View style={{ flexDirection: "row", marginBottom: 20, marginTop: 10 }}>
-                {birdNumberOpts.map((opt, i) => (
-                    <RadioButton
-                        key={i}
-                        idx={i}
-                        radioText={opt}
-                        selected={opt === birdsNumber}
-                        onClick={() => {
-                            setBirdsNumber(opt);
-                        }}
-                    />
-                ))}
-            </View>
-            <View
-                style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingTop: 10,
-                }}
-            >
-                <View style={{ flex: 1, height: 1, backgroundColor: "purple" }} />
-                <Text
+                <View
                     style={{
-                        textAlign: "center",
-                        paddingHorizontal: 4,
-                        color: "purple",
+                        flexDirection: "row", alignItems: "center", paddingTop: 10,
                     }}
                 >
-                    Family (optional)
-                </Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: "purple" }} />
-            </View>
-            <Dropdown
-                dropdownLabel={"Family"}
-                dropdownData={uniqueFamilies}
-                labelField={"famComName"}
-                valueField={"famNameCode"}
-                placeholder={"Select a family"}
-                selectedValue={selectedFamily}
-                onSelect={(item: Family) => {
-                    console.log("Selected family:", item);
-                    setSelectedFamily(item.famNameCode);
-                }}
-            />
-            <View
-                style={{ flexDirection: "row", alignItems: "center", paddingTop: 10 }}
-            >
-                <View style={{ flex: 1, height: 1, backgroundColor: "purple" }} />
-                <View>
+                    <View style={{
+                        flex: 1, height: 1, backgroundColor: "purple",
+                    }} />
                     <Text
                         style={{
                             textAlign: "center",
@@ -175,51 +121,126 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ setGameBirds }) => 
                             color: "purple",
                         }}
                     >
-                        Location (optional)
+                        Number of flashcards
                     </Text>
+                    <View style={{
+                        flex: 1, height: 1, backgroundColor: "purple",
+                    }} />
                 </View>
-                <View style={{ flex: 1, height: 1, backgroundColor: "purple" }} />
-            </View>
-            <Dropdown
-                dropdownLabel={"Country"}
-                dropdownData={allCountries as Country[]}
-                labelField={"name"}
-                valueField={"code"}
-                placeholder={"Select a country"}
-                selectedValue={selectedCountry}
-                onSelect={(item: Country) => {
-                    setSelectedCountry(item.code);
-                }}
-            />
-            {selectedCountry && allSubnational1.length > 0 && (
+                <View style={{
+                    flexDirection: "row", marginBottom: 20, marginTop: 10,
+                }}>
+                    {birdNumberOpts.map((opt, i) => (
+                        <RadioButton
+                            key={i}
+                            idx={i}
+                            radioText={opt}
+                            selected={opt === birdsNumber}
+                            onClick={() => {
+                                setBirdsNumber(opt);
+                            }}
+                        />
+                    ))}
+                </View>
+                <View
+                    style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        paddingTop: 10,
+                    }}
+                >
+                    <View style={{
+                        flex: 1, height: 1, backgroundColor: "purple",
+                    }} />
+                    <Text
+                        style={{
+                            textAlign: "center",
+                            paddingHorizontal: 4,
+                            color: "purple",
+                        }}
+                    >
+                        Family (optional)
+                    </Text>
+                    <View style={{
+                        flex: 1, height: 1, backgroundColor: "purple",
+                    }} />
+                </View>
                 <Dropdown
-                    dropdownLabel={"State/Province"}
-                    dropdownData={allSubnational1}
-                    labelField={"name"}
-                    valueField={"code"}
-                    placeholder={"Select a state/province"}
-                    selectedValue={selectedStateProvince}
-                    onSelect={(item: Region) => {
-                        setSelectedStateProvince(item.code);
+                    dropdownLabel={"Family"}
+                    dropdownData={uniqueFamilies}
+                    labelField={"famComName"}
+                    valueField={"famNameCode"}
+                    placeholder={"Select a family"}
+                    selectedValue={selectedFamily}
+                    onSelect={(item: Family) => {
+                        console.log("Selected family:", item);
+                        setSelectedFamily(item.famNameCode);
                     }}
                 />
-            )}
-            {selectedStateProvince && allSubnational2.length > 0 && (
+                <View
+                    style={{
+                        flexDirection: "row", alignItems: "center", paddingTop: 10,
+                    }}
+                >
+                    <View style={{
+                        flex: 1, height: 1, backgroundColor: "purple",
+                    }} />
+                    <View>
+                        <Text
+                            style={{
+                                textAlign: "center",
+                                paddingHorizontal: 4,
+                                color: "purple",
+                            }}
+                        >
+                            Location (optional)
+                        </Text>
+                    </View>
+                    <View style={{
+                        flex: 1, height: 1, backgroundColor: "purple",
+                    }} />
+                </View>
                 <Dropdown
-                    dropdownLabel={"County/Region"}
-                    dropdownData={allSubnational2}
+                    dropdownLabel={"Country"}
+                    dropdownData={allCountries as Country[]}
                     labelField={"name"}
                     valueField={"code"}
-                    placeholder={"Select a county/region"}
-                    selectedValue={selectedCountyRegion}
-                    onSelect={(item: Region) => {
-                        setSelectedCountyRegion(item.code);
+                    placeholder={"Select a country"}
+                    selectedValue={selectedCountry}
+                    onSelect={(item: Country) => {
+                        setSelectedCountry(item.code);
                     }}
                 />
-            )}
-            <View style={styles.buttonRow}>
-                <Button title="create game" onClick={handleCreateGame} />
-                <Button title="reset filters" onClick={handleClearFilters} />
+                {selectedCountry && allSubnational1.length > 0 && (
+                    <Dropdown
+                        dropdownLabel={"State/Province"}
+                        dropdownData={allSubnational1}
+                        labelField={"name"}
+                        valueField={"code"}
+                        placeholder={"Select a state/province"}
+                        selectedValue={selectedStateProvince}
+                        onSelect={(item: Region) => {
+                            setSelectedStateProvince(item.code);
+                        }}
+                    />
+                )}
+                {selectedStateProvince && allSubnational2.length > 0 && (
+                    <Dropdown
+                        dropdownLabel={"County/Region"}
+                        dropdownData={allSubnational2}
+                        labelField={"name"}
+                        valueField={"code"}
+                        placeholder={"Select a county/region"}
+                        selectedValue={selectedCountyRegion}
+                        onSelect={(item: Region) => {
+                            setSelectedCountyRegion(item.code);
+                        }}
+                    />
+                )}
+                <View style={styles.buttonRow}>
+                    <Button title="create game" onClick={handleCreateGame} />
+                    <Button title="reset filters" onClick={handleClearFilters} />
+                </View>
             </View>
         </View>
     );
@@ -228,9 +249,11 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ setGameBirds }) => 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        overflow: "hidden",
+        alignItems: "center",
+        justifyContent: "center",
         borderRadius: 20,
         borderWidth: 2,
+        borderColor: colors.purple,
         backgroundColor: "#fff",
         paddingHorizontal: 10,
     },
