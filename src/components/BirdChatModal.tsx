@@ -37,7 +37,6 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
         const newUserMsg: ChatMessage = { role: 'user', content: input.trim() };
         const convo = [...messages, newUserMsg];
         setMessages(convo);
-        console.log(`BirdChatModal.handleSend\n\t"${convo.map(msg => `${msg.content} -- ${msg.role}`).join(' ')}"`);
         setInput('');
         try {
             const reply = await sendBirdChatMessage(convo);
@@ -59,6 +58,7 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                     <Text style={styles.closeText}>Close</Text>
                 </TouchableOpacity>
+                <Text style={styles.aiContentWarning}>AI-generated content may be incorrect.</Text>
                 <FlatList
                     data={messages}
                     keyExtractor={(_, idx) => idx.toString()}
@@ -96,6 +96,19 @@ const styles = StyleSheet.create({
     closeText: {
         fontSize: 16,
         color: '#007AFF',
+    },
+    aiContentWarning: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        color: '#fff',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        fontSize: 12,
+        fontWeight: 'bold',
+        zIndex: 1,
     },
     messagesContainer: {
         flexGrow: 1,

@@ -25,11 +25,6 @@ export async function sendBirdChatMessage(
             "Missing Azure OpenAI configuration. Check environment variables."
         );
     }
-    console.log(
-        `BirdChatService.sendBirdChatMessage\n\t"${messages
-            .map((msg) => `${msg.content} -- ${msg.role}`)
-            .join(" ")}"`
-    );
     const res = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -38,7 +33,7 @@ export async function sendBirdChatMessage(
         },
         body: JSON.stringify({
             messages,
-            // max_completion_tokens: 500,
+            // max_completion_tokens: 50000,
         }),
     });
     if (!res.ok) {
