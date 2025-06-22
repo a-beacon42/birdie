@@ -15,7 +15,7 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
     useEffect(() => {
         if (visible) {
             const initConversation = async () => {
-                const systemMsg: ChatMessage = { role: 'system', content: 'You are an expert ornithologist who specializes in field identification. You only talk about birds. All responses must be under 250 words.' };
+                const systemMsg: ChatMessage = { role: 'system', content: 'You are an expert ornithologist who specializes in field identification. You answer questions concisely & factually -- if you are not absolutely sure of something, do not include it in your response. focus on: key morphological features, habitat & range, & behavior. You **MUST** limit responses to 150 words or fewer.' };
                 const userMsg: ChatMessage = { role: 'user', content: `What are the key identifiers for ${commonName}?` };
                 setMessages([systemMsg, userMsg]);
                 try {
