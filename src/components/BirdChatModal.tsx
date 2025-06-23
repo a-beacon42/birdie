@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, Modal, View, Text, FlatList, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView, Modal, View, Text, FlatList, TextInput, Image, Button, StyleSheet, TouchableOpacity } from 'react-native';
 import { ChatMessage, sendBirdChatMessage } from '../services/BirdChatService';
 
 interface BirdChatModalProps {
@@ -74,7 +74,12 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
                         style={styles.input}
                         placeholder="Type your message..."
                     />
-                    <Button title="Send" onPress={handleSend} disabled={!input.trim()} />
+                    <TouchableOpacity onPress={handleSend} disabled={!input.trim()} >
+                        <Image
+                            source={require('../../assets/send-icon.png')}
+                            style={styles.sendButton}
+                        />
+                    </TouchableOpacity>
                 </View>
             </SafeAreaView>
         </Modal>
@@ -94,6 +99,10 @@ const styles = StyleSheet.create({
     closeButton: {
         alignSelf: 'flex-end',
         padding: 10,
+    },
+    sendButton: {
+        width: 40,
+        height: 40,
     },
     closeText: {
         fontSize: 16,
