@@ -54,6 +54,6 @@ export const createGame = async (
       message: "No birds found for the selected filters",
     };
   }
-  const randomBirds: Bird[] = getRandomBirds(sppCodes, birdsNumber);
+  const randomBirds: Bird[] = getRandomBirds(birdsNumber, sppCodes);
   return { status: "success", data: randomBirds };
 };

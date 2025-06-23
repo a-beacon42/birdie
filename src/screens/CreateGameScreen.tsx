@@ -4,7 +4,7 @@ import Button from "../components/Button";
 import RadioButton from "../components/RadioButton";
 import Dropdown from "../components/Dropdown";
 import allCountries from "../data/AllCountries.json";
-import { Family, getUniqueFamilies } from "../services/BirdsService";
+import { Bird, getAllBirds, Family, getUniqueFamilies } from "../services/BirdsService";
 import { createGame } from "../services/CreateGameService";
 import {
     getSubnational1Regions,
@@ -22,13 +22,13 @@ type Region = {
     code: string;
 };
 
-type GameBird = any;
-
 type CreateGameScreenProps = {
-    setGameBirds: (birds: GameBird[]) => void;
+    setGameBirds: (birds: Bird[]) => void;
+    setIsPlaying: (isPlaying: boolean) => void;
 };
 
-const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ setGameBirds }) => {
+const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ setGameBirds, setIsPlaying }) => {
+    const [filteredBirds, setFilteredBirds] = useState<Bird[]>(getAllBirds());
     const uniqueFamilies: Family[] = getUniqueFamilies();
     const birdNumberOpts = ["25", "50", "all"];
     const [birdsNumber, setBirdsNumber] = useState<string>("25");
@@ -80,6 +80,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ setGameBirds }) => 
             return;
         } else {
             setGameBirds(gameBirds.data);
+            setIsPlaying(true);
         }
     };
 

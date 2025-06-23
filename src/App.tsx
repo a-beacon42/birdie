@@ -6,6 +6,7 @@ import CreateGameScreen from "./screens/CreateGameScreen";
 import { Bird } from "./services/BirdsService";
 
 const App: React.FC = () => {
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [gameBirds, setGameBirds] = useState<Bird[]>([]);
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -18,12 +19,13 @@ const App: React.FC = () => {
         }}
         style={styles.scrollView}
       >
-        {!gameBirds || gameBirds.length === 0 ? (
-          <CreateGameScreen setGameBirds={setGameBirds} />
+        {!isPlaying ? (
+          <CreateGameScreen setGameBirds={setGameBirds} setIsPlaying={setIsPlaying} />
         ) : null}
-        {gameBirds && gameBirds.length > 0 ? (
-          <GameScreen birds={gameBirds} setGameBirds={setGameBirds} />
-        ) : null}
+        {isPlaying ? (
+          <GameScreen birds={gameBirds} setGameBirds={setGameBirds} setIsPlaying={setIsPlaying} />
+        ) : null
+        }
       </ScrollView>
     </SafeAreaView>
   );

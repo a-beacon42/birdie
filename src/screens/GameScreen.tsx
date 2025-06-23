@@ -6,9 +6,10 @@ import Button from "../components/Button";
 interface GameScreenProps {
   birds: any[];
   setGameBirds: React.Dispatch<React.SetStateAction<any[]>>;
+  setIsPlaying: (isPlaying: boolean) => void;
 }
 
-const GameScreen: React.FC<GameScreenProps> = ({ birds, setGameBirds }) => {
+const GameScreen: React.FC<GameScreenProps> = ({ birds, setGameBirds, setIsPlaying }) => {
   const [currentBirdIndex, setCurrentBirdIndex] = useState<number>(0);
   const gameBirds = birds;
   const deckSize = birds.length;
@@ -30,6 +31,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ birds, setGameBirds }) => {
   const handleEndGame = () => {
     setCurrentBirdIndex(0);
     setGameBirds([]);
+    setIsPlaying(false);
   };
 
   return (

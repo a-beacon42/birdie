@@ -12,11 +12,15 @@ export interface Family {
   famComName: string;
 }
 
+export const getAllBirds = (): Bird[] => {
+  return birdsData;
+}
+
 export const getAllSppCodes = (): string[] => {
   return birdsData.map((bird: Bird) => bird.speciesCode);
 };
 
-export const getRandomBirds = (sppCodes: string[], count: number): Bird[] => {
+export const getRandomBirds = (count: number, sppCodes: string[]): Bird[] => {
   const allBirds = getBirdsBySpeciesCodes(sppCodes);
   const randomBirds = allBirds
     .sort(() => Math.random() - Math.random())
