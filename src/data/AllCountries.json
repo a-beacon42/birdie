@@ -1,5 +1,9 @@
 [
     {
+        "code": "US",
+        "name": "United States"
+    },
+    {
         "code": "AF",
         "name": "Afghanistan"
     },
@@ -950,10 +954,6 @@
     {
         "code": "GB",
         "name": "United Kingdom"
-    },
-    {
-        "code": "US",
-        "name": "United States"
     },
     {
         "code": "UM",
