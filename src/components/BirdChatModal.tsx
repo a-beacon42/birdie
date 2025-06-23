@@ -46,6 +46,8 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
         }
     };
 
+    const msgsToRender = messages.filter(msg => msg.role === 'user' || msg.role === 'assistant');
+
     const renderItem = ({ item }: { item: ChatMessage }) => (
         <View style={item.role === 'user' ? styles.userMsg : styles.assistantMsg}>
             <Text>{item.content}</Text>
@@ -55,12 +57,12 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
             <SafeAreaView style={styles.safeArea}>
+                <Text style={styles.aiContentWarning}>AI-generated content may be incorrect.</Text>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                     <Text style={styles.closeText}>Close</Text>
                 </TouchableOpacity>
-                <Text style={styles.aiContentWarning}>AI-generated content may be incorrect.</Text>
                 <FlatList
-                    data={messages}
+                    data={msgsToRender}
                     keyExtractor={(_, idx) => idx.toString()}
                     renderItem={renderItem}
                     contentContainerStyle={styles.messagesContainer}
@@ -98,9 +100,6 @@ const styles = StyleSheet.create({
         color: '#007AFF',
     },
     aiContentWarning: {
-        position: 'absolute',
-        top: 10,
-        right: 10,
         backgroundColor: 'rgba(0,0,0,0.5)',
         color: '#fff',
         paddingHorizontal: 6,
@@ -108,7 +107,6 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         fontSize: 12,
         fontWeight: 'bold',
-        zIndex: 1,
     },
     messagesContainer: {
         flexGrow: 1,
@@ -136,6 +134,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderColor: '#ccc',
         paddingVertical: 6,
+        paddingHorizontal: 10,
     },
     input: {
         flex: 1,
