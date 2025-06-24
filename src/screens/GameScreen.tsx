@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import FlashCard from "../components/FlashCard";
 import Button from "../components/Button";
+import { Bird } from "../services/BirdsService";
 
 interface GameScreenProps {
-  birds: any[];
+  birds: Bird[];
   setGameBirds: React.Dispatch<React.SetStateAction<any[]>>;
   setIsPlaying: (isPlaying: boolean) => void;
 }
