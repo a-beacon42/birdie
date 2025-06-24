@@ -17,7 +17,7 @@ export const getAllBirds = (): Bird[] => {
 }
 
 export const getAllSppCodes = (): string[] => {
-  return birdsData.map((bird: Bird) => bird.speciesCode);
+  return birdsData.map((bird: Bird) => bird.sppCode);
 };
 
 export const getRandomBirds = (count: number, sppCodes: string[]): Bird[] => {

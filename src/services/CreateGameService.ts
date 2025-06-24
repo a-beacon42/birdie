@@ -1,4 +1,4 @@
-import { getRandomBirds, getSppCodesByFamily, Bird } from "./BirdsService";
+import { getRandomBirds, getSppCodesByFamily, getAllSppCodes, Bird } from "./BirdsService";
 import { getSpeciesList } from "../api/ebirdAPI";
 
 export interface CreateGameFilters {
@@ -33,19 +33,24 @@ export const createGame = async (
   let regionCode: string | null =
     selectedCountyRegion || selectedStateProvince || selectedCountry || null;
 
-  const sppCodesByRegion: string[] = regionCode ? await getSpeciesList(regionCode) : [];
-  const sppCodesByFamily: string[] = selectedFamily
+  const sppCodesByRegion: string[] | null = regionCode ?
+    await getSpeciesList(regionCode)
+    : null;
+  const sppCodesByFamily: string[] | null = selectedFamily
     ? await getSppCodesByFamily(selectedFamily)
-    : [];
+    : null;
 
   let sppCodes: string[];
 
-  if (sppCodesByFamily.length > 0 && sppCodesByRegion.length > 0) {
+  if (sppCodesByFamily && sppCodesByRegion) {
     sppCodes = sppCodesByFamily.filter(sppCode => sppCodesByRegion.includes(sppCode));
-  } else if (sppCodesByFamily.length > 0) {
+  } else if (sppCodesByFamily) {
     sppCodes = sppCodesByFamily;
-  } else {
+  } else if (sppCodesByRegion) {
     sppCodes = sppCodesByRegion;
+  }
+  else {
+    sppCodes = getAllSppCodes();
   }
 
   if (sppCodes.length === 0) {
