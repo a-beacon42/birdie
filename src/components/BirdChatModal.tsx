@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, Modal, View, Text, FlatList, TextInput, Image, Button, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView, Modal, View, Text, FlatList, TextInput, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { ChatMessage, sendBirdChatMessage } from '../services/BirdChatService';
 
 interface BirdChatModalProps {
@@ -15,7 +15,7 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
     useEffect(() => {
         if (visible) {
             const initConversation = async () => {
-                const systemMsg: ChatMessage = { role: 'system', content: 'You are an expert ornithologist who specializes in field identification. You answer questions concisely & factually -- if you are not absolutely sure of something, do not include it in your response. focus on: key morphological features, habitat & range, & behavior. You **MUST** limit responses to 150 words or fewer.' };
+                const systemMsg: ChatMessage = { role: 'system', content: 'You are an expert ornithologist who specializes in field identification. You answer questions concisely & factually -- if you are not absolutely sure of something, do not include it in your response. You only answer questions about birds. If asked about anything else, politely reply that the topic is outside your area of expertise. focus on: key morphological features, habitat & range, & behavior. If there are common lookalikes, include how to tell them apart. You **MUST** limit responses to 150 words or fewer.' };
                 const userMsg: ChatMessage = { role: 'user', content: `What are the key identifiers for ${commonName}?` };
                 setMessages([systemMsg, userMsg]);
                 try {
@@ -62,7 +62,8 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
                     <Text style={styles.closeText}>Close</Text>
                 </TouchableOpacity>
                 <FlatList
-                    data={msgsToRender}
+                    inverted
+                    data={[...msgsToRender].reverse()}
                     keyExtractor={(_, idx) => idx.toString()}
                     renderItem={renderItem}
                     contentContainerStyle={styles.messagesContainer}
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
     userMsg: {
         alignSelf: 'flex-end',
         backgroundColor: '#DCF8C6',
-        borderRadius: 5,
+        borderRadius: 15,
         padding: 8,
         marginVertical: 4,
         maxWidth: '80%',
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
     assistantMsg: {
         alignSelf: 'flex-start',
         backgroundColor: '#E5E5EA',
-        borderRadius: 5,
+        borderRadius: 15,
         padding: 8,
         marginVertical: 4,
         maxWidth: '80%',
