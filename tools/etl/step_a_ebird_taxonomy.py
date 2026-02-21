@@ -1,7 +1,8 @@
 """Step A — Ingest eBird taxonomy via the eBird API.
 
 Calls GET /v2/ref/taxonomy/ebird?fmt=json to fetch the full taxonomy,
-then filters to species-level entries (~10,800 rows).
+then filters to species-level entries (~10,800 rows) and upserts them
+to Cosmos DB.
 """
 
 import json
@@ -10,7 +11,7 @@ import os
 import requests
 from tqdm import tqdm
 
-from config import DATA_DIR, EBIRD_API_KEY
+from config import DATA_DIR, EBIRD_API_KEY, get_container
 
 EBIRD_TAXONOMY_URL = "https://api.ebird.org/v2/ref/taxonomy/ebird"
 OUTPUT_FILE = os.path.join(DATA_DIR, "ebird_taxonomy.json")
@@ -62,13 +63,29 @@ def normalize_taxonomy(raw_species: list[dict]) -> list[dict]:
 
 
 def run() -> list[dict]:
-    """Execute Step A and return normalized species data."""
+    """Execute Step A: fetch taxonomy, normalize, upsert to Cosmos DB."""
     raw = fetch_taxonomy()
     species = normalize_taxonomy(raw)
 
+    # Write local backup
     with open(OUTPUT_FILE, "w") as f:
         json.dump(species, f, indent=2)
     print(f"  Wrote {len(species)} species to {OUTPUT_FILE}")
+
+    # Upsert to Cosmos DB
+    container = get_container()
+    print(f"  Upserting {len(species)} species to Cosmos DB...")
+    success = 0
+    errors = 0
+    for bird in tqdm(species, desc="Cosmos upsert (Step A)"):
+        try:
+            container.upsert_item(bird)
+            success += 1
+        except Exception as e:
+            errors += 1
+            if errors <= 5:
+                print(f"\n  Error upserting {bird.get('id', '?')}: {e}")
+    print(f"  Cosmos upsert: {success} succeeded, {errors} failed")
 
     return species
 

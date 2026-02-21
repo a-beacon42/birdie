@@ -9,27 +9,11 @@ import sys
 import time
 
 import requests
-from azure.cosmos import CosmosClient, PartitionKey
 from tqdm import tqdm
 
-from config import COSMOS_DATABASE, COSMOS_ENDPOINT, COSMOS_KEY
+from config import get_container
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
-BIRDS_CONTAINER = "birds"
-
-
-def _get_container():
-    """Return the Cosmos DB birds container."""
-    if not COSMOS_ENDPOINT or not COSMOS_KEY:
-        print("  ERROR: COSMOS_ENDPOINT and COSMOS_KEY must be set in .env")
-        sys.exit(1)
-
-    client = CosmosClient(COSMOS_ENDPOINT, credential=COSMOS_KEY)
-    database = client.create_database_if_not_exists(id=COSMOS_DATABASE)
-    return database.create_container_if_not_exists(
-        id=BIRDS_CONTAINER,
-        partition_key=PartitionKey(path="/family_code"),
-    )
 
 
 def _query_species_missing_inat_images(container) -> list[dict]:
@@ -100,7 +84,7 @@ def run() -> list[dict]:
     """
     print("Step C: Filling image gaps with Wikimedia Commons")
 
-    container = _get_container()
+    container = get_container()
     missing = _query_species_missing_inat_images(container)
 
     if not missing:
