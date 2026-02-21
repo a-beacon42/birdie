@@ -1,19 +1,57 @@
 """Step C — Fill image gaps with Wikimedia Commons.
 
-For species that have no image after Step B, query the MediaWiki API
-for a CC-licensed photo using the scientific name.
+Queries Cosmos DB for species that have no iNaturalist image, then attempts
+to fetch a CC-licensed photo from Wikimedia Commons via the Wikipedia API.
+Updated documents are upserted directly back to Cosmos DB.
 """
 
-import json
-import os
+import sys
 import time
 
 import requests
+from azure.cosmos import CosmosClient, PartitionKey
 from tqdm import tqdm
 
-from config import DATA_DIR
+from config import COSMOS_DATABASE, COSMOS_ENDPOINT, COSMOS_KEY
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
+BIRDS_CONTAINER = "birds"
+
+
+def _get_container():
+    """Return the Cosmos DB birds container."""
+    if not COSMOS_ENDPOINT or not COSMOS_KEY:
+        print("  ERROR: COSMOS_ENDPOINT and COSMOS_KEY must be set in .env")
+        sys.exit(1)
+
+    client = CosmosClient(COSMOS_ENDPOINT, credential=COSMOS_KEY)
+    database = client.create_database_if_not_exists(id=COSMOS_DATABASE)
+    return database.create_container_if_not_exists(
+        id=BIRDS_CONTAINER,
+        partition_key=PartitionKey(path="/family_code"),
+    )
+
+
+def _query_species_missing_inat_images(container) -> list[dict]:
+    """Query Cosmos DB for species that have no iNaturalist image.
+
+    Returns species where:
+      - images array is empty, OR
+      - images array has no entry with source == 'inaturalist'
+    """
+    query = (
+        "SELECT * FROM c WHERE "
+        "ARRAY_LENGTH(c.images) = 0 "
+        "OR NOT EXISTS("
+        "  SELECT VALUE i FROM i IN c.images WHERE i.source = 'inaturalist'"
+        ")"
+    )
+    print("  Querying Cosmos DB for species missing iNaturalist images...")
+    results = list(
+        container.query_items(query=query, enable_cross_partition_query=True)
+    )
+    print(f"  Found {len(results)} species without iNaturalist images")
+    return results
 
 
 def _fetch_wikimedia_image(sci_name: str) -> dict | None:
@@ -51,48 +89,46 @@ def _fetch_wikimedia_image(sci_name: str) -> dict | None:
     return None
 
 
-def run(species: list[dict]) -> list[dict]:
-    """Fill gaps: fetch Wikimedia images for species missing photos.
+def run() -> list[dict]:
+    """Fill gaps: fetch Wikimedia images for species missing iNat photos.
 
-    Args:
-        species: Output from Step B (list of species dicts, some with images).
+    Queries Cosmos DB for species without iNaturalist images, fetches a
+    Wikimedia image for each, and upserts updated documents back to Cosmos.
 
     Returns:
-        Updated species list with additional Wikimedia images where gaps existed.
+        List of species dicts that were updated with Wikimedia images.
     """
     print("Step C: Filling image gaps with Wikimedia Commons")
 
-    missing = [s for s in species if not s.get("images")]
-    print(f"  {len(missing)} species missing images, querying Wikimedia...")
+    container = _get_container()
+    missing = _query_species_missing_inat_images(container)
 
+    if not missing:
+        print("  No species missing images — nothing to do")
+        return []
+
+    print(f"  Querying Wikimedia for {len(missing)} species...")
     filled = 0
+    updated_species: list[dict] = []
+
     for bird in tqdm(missing, desc="Fetching Wikimedia images"):
         img = _fetch_wikimedia_image(bird["sci_name"])
         if img:
+            # Replace any existing images list with the Wikimedia gap-fill
             bird["images"] = [img]
-            filled += 1
+            try:
+                container.upsert_item(bird)
+                filled += 1
+                updated_species.append(bird)
+            except Exception as e:
+                print(f"\n  Error upserting {bird.get('id', '?')}: {e}")
 
         # Light rate limiting — Wikimedia is generous but let's be polite
         time.sleep(0.5)
 
     print(f"  Filled {filled}/{len(missing)} gaps with Wikimedia images")
-
-    total_with_images = sum(1 for s in species if s.get("images"))
-    print(
-        f"  Total image coverage: {total_with_images}/{len(species)} "
-        f"({total_with_images/len(species)*100:.1f}%)"
-    )
-
-    output_file = os.path.join(DATA_DIR, "species_with_all_images.json")
-    with open(output_file, "w") as f:
-        json.dump(species, f, indent=2)
-    print(f"  Wrote intermediate data to {output_file}")
-
-    return species
+    return updated_species
 
 
 if __name__ == "__main__":
-    input_file = os.path.join(DATA_DIR, "species_with_images.json")
-    with open(input_file) as f:
-        species = json.load(f)
-    run(species)
+    run()

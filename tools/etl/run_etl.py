@@ -73,22 +73,28 @@ def main():
     if start_idx > 0:
         resume_files = {
             1: "ebird_taxonomy.json",  # Resume from B
-            2: "species_with_images.json",  # Resume from C
-            3: "species_with_all_images.json",  # Resume from D
+            2: None,  # Step C queries Cosmos DB directly — no input file needed
+            3: "species_with_images.json",  # Resume from D
             4: "species_with_audio.json",  # Resume from E
             5: "species_complete.json",  # Resume from F
         }
-        resume_file = os.path.join(DATA_DIR, resume_files[start_idx])
-        if not os.path.exists(resume_file):
+        resume_file_name = resume_files[start_idx]
+        if resume_file_name is not None:
+            resume_file = os.path.join(DATA_DIR, resume_file_name)
+            if not os.path.exists(resume_file):
+                print(
+                    f"ERROR: Cannot resume from step {args.from_step} — "
+                    f"missing intermediate file: {resume_file}"
+                )
+                sys.exit(1)
+            print(f"Loading intermediate data from {resume_file}...")
+            with open(resume_file) as f:
+                species = json.load(f)
+            print(f"  Loaded {len(species)} species\n")
+        else:
             print(
-                f"ERROR: Cannot resume from step {args.from_step} — "
-                f"missing intermediate file: {resume_file}"
+                f"Step {args.from_step.upper()} queries the database directly — no intermediate file needed.\n"
             )
-            sys.exit(1)
-        print(f"Loading intermediate data from {resume_file}...")
-        with open(resume_file) as f:
-            species = json.load(f)
-        print(f"  Loaded {len(species)} species\n")
 
     # Step A
     if start_idx <= 0:
@@ -121,8 +127,8 @@ def main():
         print("=" * 60)
         import step_c_wikimedia_images
 
-        species = step_c_wikimedia_images.run(species)
-        _cosmos_sync("C")
+        step_c_wikimedia_images.run()
+        # Step C queries Cosmos directly and upserts — no _cosmos_sync needed
         print()
 
     # Step D
