@@ -19,7 +19,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChatMessage, sendChatMessage } from "../api/birdieApi";
 import { colors, spacing, radii, typography } from "../theme";
 
@@ -30,6 +30,7 @@ interface BirdChatModalProps {
 }
 
 const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonName }) => {
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -107,7 +108,7 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -117,7 +118,11 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
             <Text style={styles.headerTitle} numberOfLines={1}>
               {commonName}
             </Text>
-            <Pressable onPress={onClose} style={styles.closeButton}>
+            <Pressable
+              onPress={onClose}
+              style={styles.closeButton}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
               <Text style={styles.closeText}>Done</Text>
             </Pressable>
           </View>
@@ -178,7 +183,7 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
             </Pressable>
           </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 };
@@ -200,6 +205,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
+    minHeight: 48,
   },
   headerTitle: {
     ...typography.h3,
@@ -208,7 +214,8 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
+    marginLeft: spacing.sm,
   },
   closeText: {
     ...typography.label,
