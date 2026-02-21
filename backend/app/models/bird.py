@@ -1,6 +1,8 @@
 """Pydantic models for bird data."""
 
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class BirdImage(BaseModel):
@@ -54,10 +56,38 @@ class BirdSummary(BaseModel):
     image_url: str = ""
 
 
+class ChatMessage(BaseModel):
+    """A single chat message with validated role and bounded content."""
+
+    role: Literal["user", "assistant"] = Field(
+        description="Message role — only user and assistant are accepted from clients"
+    )
+    content: str = Field(
+        min_length=1,
+        max_length=4000,
+        description="Message text (1–4 000 chars)",
+    )
+
+
 class ChatRequest(BaseModel):
     """Request body for the chat proxy endpoint."""
 
-    messages: list[dict]
+    bird_name: str = Field(
+        min_length=1,
+        max_length=200,
+        description="Common name of the bird being discussed",
+    )
+    messages: list[ChatMessage] = Field(
+        min_length=1,
+        max_length=20,
+        description="Conversation history (max 20 messages)",
+    )
+
+    @field_validator("bird_name")
+    @classmethod
+    def sanitize_bird_name(cls, v: str) -> str:
+        """Strip control characters and excess whitespace."""
+        return " ".join(v.split())
 
 
 class ChatResponse(BaseModel):
