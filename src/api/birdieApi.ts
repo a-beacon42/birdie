@@ -3,7 +3,7 @@
  */
 
 import axios, { AxiosInstance } from "axios";
-import { BACKEND_URL } from "@env";
+import { BACKEND_URL, API_KEY } from "@env";
 import type { Bird, BirdSummary, BirdFamily } from "../types/bird";
 
 export type { Bird, BirdSummary, BirdFamily };
@@ -12,6 +12,7 @@ export const birdieApi: AxiosInstance = axios.create({
   baseURL: BACKEND_URL || "http://localhost:8000",
   headers: {
     "Content-Type": "application/json",
+    ...(API_KEY ? { "X-API-Key": API_KEY } : {}),
   },
 });
 
@@ -76,13 +77,14 @@ export const getSpeciesList = async (
 // --- Chat proxy ---
 
 export interface ChatMessage {
-  role: "system" | "user" | "assistant";
+  role: "user" | "assistant";
   content: string;
 }
 
 export const sendChatMessage = async (
+  birdName: string,
   messages: ChatMessage[]
 ): Promise<ChatMessage> => {
-  const res = await birdieApi.post("/api/chat", { messages });
+  const res = await birdieApi.post("/api/chat", { bird_name: birdName, messages });
   return res.data;
 };

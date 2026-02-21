@@ -29,17 +29,6 @@ interface BirdChatModalProps {
   commonName: string;
 }
 
-const SYSTEM_PROMPT: ChatMessage = {
-  role: "system",
-  content:
-    "You are an expert ornithologist specializing in field identification. " +
-    "Answer questions concisely & factually — if unsure, say so. " +
-    "Only answer questions about birds; politely decline other topics. " +
-    "Focus on: key morphological features, habitat & range, behavior. " +
-    "If there are common lookalikes, explain how to tell them apart. " +
-    "Limit responses to 150 words or fewer.",
-};
-
 const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonName }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -63,7 +52,7 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
 
     let cancelled = false;
 
-    sendChatMessage([SYSTEM_PROMPT, firstUserMsg])
+    sendChatMessage(commonName, [firstUserMsg])
       .then((reply) => {
         if (!cancelled) {
           setMessages([firstUserMsg, reply]);
@@ -96,7 +85,7 @@ const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonN
     setLoading(true);
 
     try {
-      const reply = await sendChatMessage([SYSTEM_PROMPT, ...convo]);
+      const reply = await sendChatMessage(commonName, convo);
       setMessages((prev) => [...prev, reply]);
     } catch (err: any) {
       setError(err?.message ?? "Failed to send message");
