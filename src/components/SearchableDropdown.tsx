@@ -179,20 +179,39 @@ function SearchableDropdownInner<T>(props: SearchableDropdownProps<T>) {
     const screenH = Dimensions.get("window").height;
     let overlayStyle: any = {};
     if (anchorLayout) {
-        const top = anchorLayout.y + anchorLayout.height + 4;
+        const GAP = 4;
+        const PAD = 8;
+        const anchorTop = anchorLayout.y;
+        const anchorBottom = anchorLayout.y + anchorLayout.height;
         const visibleBottom = screenH - keyboardHeight;
-        const availableBelow = visibleBottom - top - 16;
-        const dropdownHeight = Math.min(maxHeight, availableBelow > 120 ? availableBelow : maxHeight);
-        const showAbove = availableBelow < 120;
+
+        const spaceBelow = visibleBottom - anchorBottom - GAP - PAD;
+        const spaceAbove = anchorTop - GAP - PAD;
+
+        let posTop: number | undefined;
+        let posBottom: number | undefined;
+        let dropdownHeight: number;
+
+        if (spaceBelow >= 120) {
+            // Enough room below the anchor, above the keyboard
+            posTop = anchorBottom + GAP;
+            dropdownHeight = Math.min(maxHeight, spaceBelow);
+        } else if (spaceAbove >= 120) {
+            // Flip above the anchor
+            posBottom = screenH - anchorTop + GAP;
+            dropdownHeight = Math.min(maxHeight, spaceAbove);
+        } else {
+            // Neither side has room — pin to top of screen, fill visible area
+            posTop = PAD;
+            dropdownHeight = Math.min(maxHeight, visibleBottom - PAD * 2);
+        }
 
         overlayStyle = {
             position: "absolute" as const,
             left: anchorLayout.x,
             width: anchorLayout.width,
             maxHeight: dropdownHeight,
-            ...(showAbove
-                ? { bottom: screenH - anchorLayout.y + 4 }
-                : { top }),
+            ...(posTop !== undefined ? { top: posTop } : { bottom: posBottom }),
         };
     }
 
