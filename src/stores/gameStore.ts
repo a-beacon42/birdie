@@ -17,19 +17,26 @@ export interface SessionAnswer {
     timeMs: number;
 }
 
+export interface GameFilters {
+    familyLabel?: string;
+    regionLabel?: string;
+}
+
+
 interface GameState {
     // --- Game Setup ---
     birds: BirdSummary[];
     currentIndex: number;
     quizMode: QuizMode;
     isPlaying: boolean;
+    filters: GameFilters;
 
     // --- Score Tracking ---
     answers: SessionAnswer[];
     sessionStartedAt: number | null;
 
     // --- Actions ---
-    startGame: (birds: BirdSummary[], mode?: QuizMode) => void;
+    startGame: (birds: BirdSummary[], mode?: QuizMode, filters?: GameFilters) => void;
     endGame: () => void;
     resetGame: () => void;
     nextBird: () => void;
@@ -48,15 +55,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     currentIndex: 0,
     quizMode: "flashcard",
     isPlaying: false,
+    filters: {},
     answers: [],
     sessionStartedAt: null,
 
-    startGame: (birds, mode = "flashcard") =>
+    startGame: (birds, mode = "flashcard", filters = {}) =>
         set({
             birds,
             currentIndex: 0,
             quizMode: mode,
             isPlaying: true,
+            filters,
             answers: [],
             sessionStartedAt: Date.now(),
         }),
@@ -71,6 +80,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             isPlaying: false,
             birds: [],
             currentIndex: 0,
+            filters: {},
             answers: [],
             sessionStartedAt: null,
         }),

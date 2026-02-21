@@ -96,14 +96,31 @@ export default function HomeScreen() {
             const shuffled = [...birds].sort(() => Math.random() - 0.5);
             const deck = shuffled.slice(0, cardCount);
 
-            startGame(deck);
+            // Build human-readable filter labels for the game screen
+            const familyLabel = selectedFamily
+                ? families?.find((f) => f.family_code === selectedFamily)?.family_com_name
+                : undefined;
+
+            const regionParts: string[] = [];
+            const countryObj = (allCountries as Country[]).find(
+                (c) => c.code === selectedCountry
+            );
+            if (countryObj) regionParts.push(countryObj.name);
+            const stateObj = subnational1?.find((s) => s.code === selectedState);
+            if (stateObj) regionParts.push(stateObj.name);
+            const countyObj = subnational2?.find((c) => c.code === selectedCounty);
+            if (countyObj) regionParts.push(countyObj.name);
+            const regionLabel =
+                regionParts.length > 0 ? regionParts.join(" — ") : undefined;
+
+            startGame(deck, "flashcard", { familyLabel, regionLabel });
             router.push("/game");
         } catch (err: any) {
             Alert.alert("Error", err.message || "Failed to create game");
         } finally {
             setCreating(false);
         }
-    }, [cardCount, selectedFamily, selectedCountry, selectedState, selectedCounty, startGame, router]);
+    }, [cardCount, selectedFamily, selectedCountry, selectedState, selectedCounty, families, subnational1, subnational2, startGame, router]);
 
     const handleClearFilters = useCallback(() => {
         setCardCount(25);

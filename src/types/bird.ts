@@ -40,6 +40,7 @@ export interface BirdSummary {
     family_code: string;
     family_com_name: string;
     image_url: string;
+    wikipedia_url?: string;
 }
 
 export interface BirdFamily {
