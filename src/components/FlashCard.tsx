@@ -19,6 +19,8 @@ interface FlashCardProps {
   cardWidth?: number;
   /** Called when the user taps "Ask AI about this bird" */
   onAskAI?: () => void;
+  /** Called when the user taps the (i) info button */
+  onInfoPress?: () => void;
 }
 
 const PLACEHOLDER = require("../../assets/splash-icon.png");
@@ -29,6 +31,7 @@ const FlashCard: React.FC<FlashCardProps> = ({
   latinName,
   cardWidth = 350,
   onAskAI,
+  onInfoPress,
 }) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const [flipped, setFlipped] = useState(false);
@@ -58,6 +61,10 @@ const FlashCard: React.FC<FlashCardProps> = ({
     onAskAI?.();
   }, [onAskAI]);
 
+  const handleInfo = useCallback(() => {
+    onInfoPress?.();
+  }, [onInfoPress]);
+
   const cardHeight = cardWidth * 1.15;
   const imageSource = imageUrl && !imageError ? imageUrl : PLACEHOLDER;
 
@@ -80,9 +87,6 @@ const FlashCard: React.FC<FlashCardProps> = ({
           cachePolicy="disk"
           onError={() => setImageError(true)}
         />
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>Tap to flip</Text>
-        </View>
       </Animated.View>
 
       {/* ---- Back: image + info ---- */}
@@ -93,21 +97,30 @@ const FlashCard: React.FC<FlashCardProps> = ({
           { transform: [{ rotateY: backRotation }] },
         ]}
       >
-        <Image
-          source={imageSource}
-          style={styles.imageBack}
-          contentFit="cover"
-          transition={0}
-          cachePolicy="disk"
-        />
+        <View style={styles.imageBackContainer}>
+          <Image
+            source={imageSource}
+            style={styles.imageBack}
+            contentFit="contain"
+            transition={0}
+            cachePolicy="disk"
+          />
+        </View>
         <View style={styles.infoArea}>
           <Text style={styles.commonName}>{commonName}</Text>
           <Text style={styles.latinName}>{latinName}</Text>
-          {onAskAI && (
-            <Pressable onPress={handleAskAI} style={styles.chatButton}>
-              <Text style={styles.chatButtonText}>Ask AI about this bird</Text>
-            </Pressable>
-          )}
+          <View style={styles.buttonRow}>
+            {onAskAI && (
+              <Pressable onPress={handleAskAI} style={styles.chatButton}>
+                <Text style={styles.chatButtonText}>Ask AI</Text>
+              </Pressable>
+            )}
+            {onInfoPress && (
+              <Pressable onPress={handleInfo} style={styles.infoButton}>
+                <Text style={styles.infoButtonText}>ⓘ</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       </Animated.View>
     </Pressable>
@@ -135,7 +148,12 @@ const styles = StyleSheet.create({
   },
   imageBack: {
     width: "100%",
+    height: "100%",
+  },
+  imageBackContainer: {
+    width: "100%",
     height: "55%",
+    backgroundColor: colors.surfaceElevated,
   },
   infoArea: {
     flex: 1,
@@ -157,7 +175,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   chatButton: {
-    marginTop: spacing.md,
     backgroundColor: colors.primary,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
@@ -166,6 +183,27 @@ const styles = StyleSheet.create({
   chatButtonText: {
     ...typography.label,
     color: "#fff",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  infoButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  infoButtonText: {
+    fontSize: 20,
+    color: colors.primary,
+    lineHeight: 24,
   },
   badge: {
     position: "absolute",

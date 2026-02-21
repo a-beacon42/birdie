@@ -11,24 +11,39 @@ interface ScoreBarProps {
     total: number;
     correct: number;
     incorrect: number;
+    familyLabel?: string;
+    regionLabel?: string;
 }
 
-const ScoreBar: React.FC<ScoreBarProps> = ({ current, total, correct, incorrect }) => {
+const ScoreBar: React.FC<ScoreBarProps> = ({
+    current,
+    total,
+    correct,
+    incorrect,
+    familyLabel,
+    regionLabel,
+}) => {
     const progress = total > 0 ? current / total : 0;
+    const filterText = [familyLabel, regionLabel].filter(Boolean).join(" — ");
 
     return (
         <View style={styles.container}>
             <View style={styles.statsRow}>
-                <Text style={[styles.stat, { color: colors.correct }]}>✓ {correct}</Text>
+                <Text style={[styles.stat, { color: colors.incorrect }]}>✗ {incorrect}</Text>
                 <Text style={styles.position}>
                     {current} / {total}
                 </Text>
-                <Text style={[styles.stat, { color: colors.incorrect }]}>✗ {incorrect}</Text>
+                <Text style={[styles.stat, { color: colors.correct }]}>✓ {correct}</Text>
             </View>
             <View style={styles.track}>
                 <View style={[styles.fill, { flex: progress }]} />
                 <View style={{ flex: 1 - progress }} />
             </View>
+            {filterText ? (
+                <Text style={styles.filterText} numberOfLines={1}>
+                    {filterText}
+                </Text>
+            ) : null}
         </View>
     );
 };
@@ -64,5 +79,11 @@ const styles = StyleSheet.create({
     fill: {
         backgroundColor: colors.primary,
         borderRadius: radii.full,
+    },
+    filterText: {
+        ...typography.caption,
+        color: colors.textMuted,
+        textAlign: "center" as const,
+        marginTop: spacing.xs,
     },
 });

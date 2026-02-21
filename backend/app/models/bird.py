@@ -54,6 +54,7 @@ class BirdSummary(BaseModel):
     family_code: str
     family_com_name: str
     image_url: str = ""
+    wikipedia_url: str = ""
 
 
 class ChatMessage(BaseModel):

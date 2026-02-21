@@ -6,26 +6,45 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { View, Text, StyleSheet, Pressable, Dimensions } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Dimensions,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { colors, spacing, radii, typography } from "../src/theme";
 import { useGameStore } from "../src/stores/gameStore";
 import FlashCard from "../src/components/FlashCard";
 import ScoreBar from "../src/components/ScoreBar";
 import ResultsModal from "../src/components/ResultsModal";
 import BirdChatModal from "../src/components/BirdChatModal";
+import WikipediaModal from "../src/components/WikipediaModal";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - spacing.lg * 2, 400);
+const SWIPE_THRESHOLD = 50;
 
 export default function GameScreen() {
   const router = useRouter();
-  const { birds, currentIndex, nextBird, prevBird, resetGame, answers, recordAnswer } =
-    useGameStore();
+  const {
+    birds,
+    currentIndex,
+    nextBird,
+    prevBird,
+    resetGame,
+    answers,
+    recordAnswer,
+    filters,
+  } = useGameStore();
 
   const [showResults, setShowResults] = useState(false);
   const [chatBirdName, setChatBirdName] = useState<string | null>(null);
+  const [wikiUrl, setWikiUrl] = useState<string | null>(null);
+  const [wikiTitle, setWikiTitle] = useState<string>("");
 
   // ---- Per-card timer (resets every time currentIndex changes) ----
   const cardStartTime = useRef(Date.now());
@@ -63,18 +82,42 @@ export default function GameScreen() {
     advance();
   }, [currentBird, hasAnswered, recordAnswer, advance]);
 
-  const handleSkip = useCallback(() => {
-    if (!hasAnswered && currentBird) {
-      recordAnswer(currentBird.species_code, "skipped", 0);
-    }
-    advance();
-  }, [hasAnswered, currentBird, recordAnswer, advance]);
-
   const handleEndGame = useCallback(() => {
     setShowResults(false);
     resetGame();
     router.replace("/");
   }, [resetGame, router]);
+
+  const handleInfoPress = useCallback(() => {
+    if (!currentBird) return;
+    const url = currentBird.wikipedia_url;
+    if (url) {
+      setWikiTitle(currentBird.com_name);
+      setWikiUrl(url);
+    }
+  }, [currentBird]);
+
+  // ---- Swipe gesture ----
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .onEnd((event) => {
+      if (event.translationX < -SWIPE_THRESHOLD) {
+        // Swipe left → advance
+        if (isLastCard) {
+          setShowResults(true);
+        } else {
+          if (!hasAnswered && currentBird) {
+            recordAnswer(currentBird.species_code, "skipped", 0);
+          }
+          nextBird();
+        }
+      } else if (event.translationX > SWIPE_THRESHOLD) {
+        // Swipe right → go back
+        if (currentIndex > 0) {
+          prevBird();
+        }
+      }
+    });
 
   // ---- Empty state ----
   if (!currentBird) {
@@ -99,71 +142,77 @@ export default function GameScreen() {
           total={deckSize}
           correct={answers.filter((a) => a.result === "correct").length}
           incorrect={answers.filter((a) => a.result === "incorrect").length}
+          familyLabel={filters.familyLabel}
+          regionLabel={filters.regionLabel}
         />
 
-        {/* Card */}
-        <View style={styles.cardArea}>
-          <FlashCard
-            key={currentBird.species_code}
-            imageUrl={currentBird.image_url}
-            commonName={currentBird.com_name}
-            latinName={currentBird.sci_name}
-            speciesCode={currentBird.species_code}
-            cardWidth={CARD_WIDTH}
-            onAskAI={() => setChatBirdName(currentBird.com_name)}
-          />
-        </View>
+        {/* Card + answer row grouped together */}
+        <View style={styles.cardSection}>
+          {/* Card with swipe */}
+          <GestureDetector gesture={swipeGesture}>
+            <View style={styles.cardArea}>
+              <FlashCard
+                key={currentBird.species_code}
+                imageUrl={currentBird.image_url}
+                commonName={currentBird.com_name}
+                latinName={currentBird.sci_name}
+                speciesCode={currentBird.species_code}
+                cardWidth={CARD_WIDTH}
+                onAskAI={() => setChatBirdName(currentBird.com_name)}
+                onInfoPress={
+                  currentBird.wikipedia_url ? handleInfoPress : undefined
+                }
+              />
+            </View>
+          </GestureDetector>
 
-        {/* Self-assessment buttons */}
-        <View style={styles.answerRow}>
-          <Pressable
-            style={({ pressed }) => [styles.answerButton, styles.incorrectBtn, pressed && styles.pressed]}
-            onPress={handleIncorrect}
-          >
-            <Text style={styles.answerBtnText}>Didn't Know</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.answerButton, styles.skipBtn, pressed && styles.pressed]}
-            onPress={handleSkip}
-          >
-            <Text style={[styles.answerBtnText, { color: colors.textSecondary }]}>Skip</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.answerButton, styles.correctBtn, pressed && styles.pressed]}
-            onPress={handleCorrect}
-          >
-            <Text style={styles.answerBtnText}>Knew It</Text>
-          </Pressable>
-        </View>
+          {/* Emoji answer buttons — snug under the card */}
+          <View style={styles.answerRow}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.emojiButton,
+                styles.incorrectBtn,
+                pressed && styles.pressed,
+              ]}
+              onPress={handleIncorrect}
+            >
+              <Text style={styles.emoji}>❌</Text>
+            </Pressable>
 
-        {/* Navigation */}
-        <View style={styles.navRow}>
-          <Pressable
-            style={styles.navButton}
-            onPress={prevBird}
-            disabled={currentIndex === 0}
-          >
-            <Text style={[styles.navText, currentIndex === 0 && styles.navTextDisabled]}>
-              ← Prev
-            </Text>
-          </Pressable>
+            <Pressable style={styles.endButton} onPress={handleEndGame}>
+              <Text style={styles.endButtonText}>End Game</Text>
+            </Pressable>
 
-          <Pressable style={styles.endButton} onPress={handleEndGame}>
-            <Text style={styles.endButtonText}>End Game</Text>
-          </Pressable>
-
-          <Pressable style={styles.navButton} onPress={handleSkip}>
-            <Text style={styles.navText}>{isLastCard ? "Finish →" : "Next →"}</Text>
-          </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.emojiButton,
+                styles.correctBtn,
+                pressed && styles.pressed,
+              ]}
+              onPress={handleCorrect}
+            >
+              <Text style={styles.emoji}>✅</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 
       {/* Modals */}
-      <ResultsModal visible={showResults} onClose={() => setShowResults(false)} onEndGame={handleEndGame} />
+      <ResultsModal
+        visible={showResults}
+        onClose={() => setShowResults(false)}
+        onEndGame={handleEndGame}
+      />
       <BirdChatModal
         visible={!!chatBirdName}
         onClose={() => setChatBirdName(null)}
         commonName={chatBirdName ?? ""}
+      />
+      <WikipediaModal
+        visible={!!wikiUrl}
+        onClose={() => setWikiUrl(null)}
+        url={wikiUrl ?? ""}
+        title={wikiTitle}
       />
     </SafeAreaView>
   );
@@ -178,8 +227,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
   },
-  cardArea: {
+  cardSection: {
     flex: 1,
+    justifyContent: "center",
+  },
+  cardArea: {
     alignItems: "center",
     justifyContent: "center",
   },
@@ -205,14 +257,18 @@ const styles = StyleSheet.create({
   },
   answerRow: {
     flexDirection: "row",
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-  },
-  answerButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: radii.md,
+    justifyContent: "center",
     alignItems: "center",
+    gap: spacing.lg,
+    marginTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  emojiButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
   correctBtn: {
     backgroundColor: colors.correct + "20",
@@ -224,33 +280,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.incorrect,
   },
-  skipBtn: {
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-  },
   pressed: {
     opacity: 0.7,
   },
-  answerBtnText: {
-    ...typography.label,
-    fontSize: 13,
-  },
-  navRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingBottom: spacing.lg,
-  },
-  navButton: {
-    padding: spacing.sm,
-  },
-  navText: {
-    ...typography.label,
-    color: colors.primary,
-  },
-  navTextDisabled: {
-    color: colors.textMuted,
+  emoji: {
+    fontSize: 28,
   },
   endButton: {
     borderWidth: 1.5,
