@@ -4,6 +4,8 @@ Downloads taxa.csv.gz and photos.csv.gz from the inaturalist-open-data S3 bucket
 joins eBird species to iNat taxon IDs via scientific name, and selects the
 best CC-licensed photo per species.
 
+Loads species from Cosmos DB and upserts results back directly.
+
 This is the most time-intensive step (~15-30 min for download + processing).
 """
 
@@ -17,7 +19,7 @@ from botocore import UNSIGNED
 from botocore.config import Config
 from tqdm import tqdm
 
-from config import DATA_DIR, INAT_S3_BUCKET
+from config import DATA_DIR, INAT_S3_BUCKET, get_container, load_all_species
 
 TAXA_KEY = "taxa.csv.gz"
 PHOTOS_KEY = "photos.csv.gz"
@@ -93,17 +95,22 @@ def _load_photos() -> pd.DataFrame:
     return df
 
 
-def run(species: list[dict], cosmos_batch: bool = False) -> list[dict]:
-    """Match iNaturalist photos to each species and update the species list.
+def run() -> list[dict]:
+    """Match iNaturalist photos to each species.
 
-    Args:
-        species: Output from Step A (list of normalized bird dicts).
-        cosmos_batch: If True, upsert all species to Cosmos every 500 photo fetches.
+    Loads species from Cosmos DB, matches iNat taxon IDs via S3 data exports,
+    fetches photos via the iNat API, and upserts results back to Cosmos.
 
     Returns:
         Updated species list with inat_taxon_id and images populated where matched.
     """
     print("Step B: Matching iNaturalist photos")
+
+    container = get_container()
+    print("  Loading species from Cosmos DB...")
+    species = load_all_species()
+    print(f"  Loaded {len(species)} species")
+
     _download_s3_file(TAXA_KEY, TAXA_LOCAL)
     _download_s3_file(PHOTOS_KEY, PHOTOS_LOCAL)
 
@@ -120,66 +127,40 @@ def run(species: list[dict], cosmos_batch: bool = False) -> list[dict]:
         f"  Matched {matched_count}/{len(species_df)} species to iNaturalist taxon IDs"
     )
 
-    # Build a lookup: taxon_id -> best photo
-    # For now, pick the photo with the largest area (width * height), or first if missing dims
-    print("  Selecting best photo per taxon...")
-
-    # We need taxon_id from observations — iNat open data photos.csv doesn't have taxon_id directly.
-    # We'll need the observations table for the join. For simplicity, we'll use the iNat API
-    # for matched taxa as a fallback approach.
-    #
-    # ALTERNATIVE APPROACH: Use the iNaturalist REST API for taxa with default_photo.
-    # This is simpler but rate-limited (~60 req/min). For ~10K species, that's ~3 hours.
-    # We'll use this approach for now and can optimize with bulk S3 data later.
-
     taxon_id_map = dict(zip(merged["species_code"], merged["taxon_id"]))
 
-    # Update species with taxon IDs
+    # Update species with taxon IDs and upsert those that changed
+    print("  Updating taxon IDs...")
     for bird in tqdm(species, desc="Updating taxon IDs"):
         tid = taxon_id_map.get(bird["species_code"])
-        if pd.notna(tid):
+        if pd.notna(tid) and bird.get("inat_taxon_id") != int(tid):
             bird["inat_taxon_id"] = int(tid)
+            try:
+                container.upsert_item(bird)
+            except Exception as e:
+                print(f"\n  Error upserting {bird.get('id', '?')}: {e}")
 
-    # For photos, we'll use the iNaturalist API (v1/taxa/{id}) to get default_photo
-    # This is done in a separate step to keep things modular and allow resume on failure
-    _fetch_photos_via_api(species, cosmos_batch=cosmos_batch)
+    # Fetch photos via iNat API and upsert individually
+    _fetch_photos_via_api(species, container)
 
     with_images = sum(1 for s in species if s["images"])
     print(
         f"  Species with images: {with_images}/{len(species)} ({with_images/len(species)*100:.1f}%)"
     )
 
-    # Save intermediate result
-    output_file = os.path.join(DATA_DIR, "species_with_images.json")
-    with open(output_file, "w") as f:
-        json.dump(species, f, indent=2)
-    print(f"  Wrote intermediate data to {output_file}")
-
     return species
 
 
-def _fetch_photos_via_api(species: list[dict], cosmos_batch: bool = False) -> None:
+def _fetch_photos_via_api(species: list[dict], container) -> None:
     """Fetch default photos from iNaturalist API for species with a taxon ID.
 
     Rate limit: ~60 requests/min. Uses a simple delay to stay under.
     Saves progress incrementally to allow resume on failure.
-    When cosmos_batch=True, upserts ALL species to Cosmos every 500 fetches.
+    Each successfully fetched photo is upserted to Cosmos DB immediately.
     """
     import time
 
     import requests
-
-    # Lazy-import to avoid circular deps / requiring Cosmos creds when not needed
-    _cosmos_upsert = None
-    if cosmos_batch:
-        try:
-            from step_f_cosmos_upsert import upsert_batch
-
-            _cosmos_upsert = upsert_batch
-            print("  Cosmos batch mode enabled — will sync every 500 species")
-        except Exception as e:
-            print(f"  WARNING: Could not enable Cosmos batch mode: {e}")
-            cosmos_batch = False
 
     progress_file = os.path.join(DATA_DIR, "inat_photo_progress.json")
     processed: set[str] = set()
@@ -192,7 +173,7 @@ def _fetch_photos_via_api(species: list[dict], cosmos_batch: bool = False) -> No
     to_process = [
         s
         for s in species
-        if s["inat_taxon_id"] is not None
+        if s.get("inat_taxon_id") is not None
         and s["species_code"] not in processed
         and not s["images"]  # Skip if already has images
     ]
@@ -231,6 +212,10 @@ def _fetch_photos_via_api(species: list[dict], cosmos_batch: bool = False) -> No
                                     "is_primary": True,
                                 }
                             ]
+                            try:
+                                container.upsert_item(bird)
+                            except Exception as e:
+                                print(f"\n  Error upserting {bird.get('id', '?')}: {e}")
             elif resp.status_code == 429:
                 print(f"\n  Rate limited at item {i}, waiting 60s...")
                 time.sleep(60)
@@ -254,20 +239,10 @@ def _fetch_photos_via_api(species: list[dict], cosmos_batch: bool = False) -> No
             with open(progress_file, "w") as f:
                 json.dump(list(processed), f)
 
-        # Batch upsert ALL species to Cosmos every 500 fetches
-        if cosmos_batch and _cosmos_upsert and (i + 1) % 500 == 0:
-            print(f"\n  >> Batch Cosmos sync at {i + 1} fetches...")
-            ok, err = _cosmos_upsert(species, label=f"step-b-batch-{i+1}", quiet=True)
-            print(f"  >> {ok} upserted, {err} errors")
-
     # Final save of progress
     with open(progress_file, "w") as f:
         json.dump(list(processed), f)
 
 
 if __name__ == "__main__":
-    # Standalone: load Step A output and run
-    input_file = os.path.join(DATA_DIR, "ebird_taxonomy.json")
-    with open(input_file) as f:
-        species = json.load(f)
-    run(species)
+    run()
