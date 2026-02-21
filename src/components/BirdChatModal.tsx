@@ -1,158 +1,321 @@
-import React, { useEffect, useState } from 'react';
-import { SafeAreaView, Modal, View, Text, FlatList, TextInput, Image, StyleSheet, TouchableOpacity } from 'react-native';
-import { ChatMessage, sendBirdChatMessage } from '../services/BirdChatService';
+/**
+ * BirdChatModal — AI-powered bird identification chat.
+ *
+ * Opens a full-screen modal with a conversation about a specific bird.
+ * Auto-fires an initial identification question, shows a loading indicator
+ * while waiting for the API, and displays errors gracefully.
+ */
+
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ChatMessage, sendChatMessage } from "../api/birdieApi";
+import { colors, spacing, radii, typography } from "../theme";
 
 interface BirdChatModalProps {
-    visible: boolean;
-    onClose: () => void;
-    commonName: string;
+  visible: boolean;
+  onClose: () => void;
+  commonName: string;
 }
 
+const SYSTEM_PROMPT: ChatMessage = {
+  role: "system",
+  content:
+    "You are an expert ornithologist specializing in field identification. " +
+    "Answer questions concisely & factually — if unsure, say so. " +
+    "Only answer questions about birds; politely decline other topics. " +
+    "Focus on: key morphological features, habitat & range, behavior. " +
+    "If there are common lookalikes, explain how to tell them apart. " +
+    "Limit responses to 150 words or fewer.",
+};
+
 const BirdChatModal: React.FC<BirdChatModalProps> = ({ visible, onClose, commonName }) => {
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const listRef = useRef<FlatList>(null);
 
-    useEffect(() => {
-        if (visible) {
-            const initConversation = async () => {
-                const systemMsg: ChatMessage = { role: 'system', content: 'You are an expert ornithologist who specializes in field identification. You answer questions concisely & factually -- if you are not absolutely sure of something, do not include it in your response. You only answer questions about birds. If asked about anything else, politely reply that the topic is outside your area of expertise. focus on: key morphological features, habitat & range, & behavior. If there are common lookalikes, include how to tell them apart. You **MUST** limit responses to 150 words or fewer.' };
-                const userMsg: ChatMessage = { role: 'user', content: `What are the key identifiers for ${commonName}?` };
-                setMessages([systemMsg, userMsg]);
-                try {
-                    const reply = await sendBirdChatMessage([systemMsg, userMsg]);
-                    setMessages([systemMsg, userMsg, reply]);
-                } catch (err) {
-                    console.error(err);
-                }
-            };
-            initConversation();
-        } else {
-            setMessages([]);
-            setInput('');
-        }
-    }, [visible, commonName]);
+  // ---- Reset & auto-send first question when modal opens ----
+  useEffect(() => {
+    if (!visible || !commonName) return;
 
-    const handleSend = async () => {
-        if (!input.trim()) return;
-        const newUserMsg: ChatMessage = { role: 'user', content: input.trim() };
-        const convo = [...messages, newUserMsg];
-        setMessages(convo);
-        setInput('');
-        try {
-            const reply = await sendBirdChatMessage(convo);
-            setMessages([...convo, reply]);
-        } catch (err) {
-            console.error(err);
-        }
+    const firstUserMsg: ChatMessage = {
+      role: "user",
+      content: `What are the key field identifiers for ${commonName}?`,
     };
 
-    const msgsToRender = messages.filter(msg => msg.role === 'user' || msg.role === 'assistant');
+    setMessages([firstUserMsg]);
+    setInput("");
+    setError(null);
+    setLoading(true);
 
-    const renderItem = ({ item }: { item: ChatMessage }) => (
-        <View style={item.role === 'user' ? styles.userMsg : styles.assistantMsg}>
-            <Text>{item.content}</Text>
-        </View>
-    );
+    let cancelled = false;
 
-    return (
-        <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-            <SafeAreaView style={styles.safeArea}>
-                <Text style={styles.aiContentWarning}>AI-generated content may be incorrect.</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                    <Text style={styles.closeText}>Close</Text>
-                </TouchableOpacity>
-                <FlatList
-                    inverted
-                    data={[...msgsToRender].reverse()}
-                    keyExtractor={(_, idx) => idx.toString()}
-                    renderItem={renderItem}
-                    contentContainerStyle={styles.messagesContainer}
-                />
-                <View style={styles.inputContainer}>
-                    <TextInput
-                        value={input}
-                        onChangeText={setInput}
-                        style={styles.input}
-                        placeholder="Type your message..."
-                    />
-                    <TouchableOpacity onPress={handleSend} disabled={!input.trim()} >
-                        <Image
-                            source={require('../../assets/send-icon.png')}
-                            style={styles.sendButton}
-                        />
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
-        </Modal>
-    );
+    sendChatMessage([SYSTEM_PROMPT, firstUserMsg])
+      .then((reply) => {
+        if (!cancelled) {
+          setMessages([firstUserMsg, reply]);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err?.message ?? "Failed to reach AI assistant");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, commonName]);
+
+  // ---- Send follow-up question ----
+  const handleSend = useCallback(async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    const userMsg: ChatMessage = { role: "user", content: text };
+    const convo = [...messages, userMsg];
+    setMessages(convo);
+    setInput("");
+    setError(null);
+    setLoading(true);
+
+    try {
+      const reply = await sendChatMessage([SYSTEM_PROMPT, ...convo]);
+      setMessages((prev) => [...prev, reply]);
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to send message");
+    } finally {
+      setLoading(false);
+    }
+  }, [input, loading, messages]);
+
+  // ---- Render ----
+  const visibleMessages = messages.filter((m) => m.role === "user" || m.role === "assistant");
+
+  const renderItem = ({ item }: { item: ChatMessage }) => (
+    <View style={item.role === "user" ? styles.userMsg : styles.assistantMsg}>
+      <Text style={item.role === "user" ? styles.userText : styles.assistantText}>
+        {item.content}
+      </Text>
+    </View>
+  );
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {commonName}
+            </Text>
+            <Pressable onPress={onClose} style={styles.closeButton}>
+              <Text style={styles.closeText}>Done</Text>
+            </Pressable>
+          </View>
+
+          {/* AI disclaimer */}
+          <View style={styles.disclaimerRow}>
+            <Text style={styles.disclaimer}>AI-generated content may be incorrect.</Text>
+          </View>
+
+          {/* Messages */}
+          <FlatList
+            ref={listRef}
+            data={visibleMessages}
+            keyExtractor={(_, idx) => String(idx)}
+            renderItem={renderItem}
+            contentContainerStyle={styles.messagesContainer}
+            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+            keyboardShouldPersistTaps="handled"
+          />
+
+          {/* Loading / Error */}
+          {loading && (
+            <View style={styles.statusRow}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.statusText}>Thinking…</Text>
+            </View>
+          )}
+          {error && (
+            <View style={styles.statusRow}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {/* Input */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              style={styles.input}
+              placeholder="Ask a follow-up…"
+              placeholderTextColor={colors.textMuted}
+              multiline
+              editable={!loading}
+              returnKeyType="send"
+              onSubmitEditing={handleSend}
+              blurOnSubmit
+            />
+            <Pressable
+              onPress={handleSend}
+              disabled={!input.trim() || loading}
+              style={({ pressed }) => [
+                styles.sendButton,
+                (!input.trim() || loading) && styles.sendDisabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.sendText}>Send</Text>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Modal>
+  );
 };
 
 export default BirdChatModal;
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#fff',
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 10,
-    },
-    closeButton: {
-        alignSelf: 'flex-end',
-        padding: 10,
-    },
-    sendButton: {
-        width: 40,
-        height: 40,
-    },
-    closeText: {
-        fontSize: 16,
-        color: '#007AFF',
-    },
-    aiContentWarning: {
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        color: '#fff',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
-    messagesContainer: {
-        flexGrow: 1,
-        paddingVertical: 10,
-    },
-    userMsg: {
-        alignSelf: 'flex-end',
-        backgroundColor: '#DCF8C6',
-        borderRadius: 15,
-        padding: 8,
-        marginVertical: 4,
-        maxWidth: '80%',
-    },
-    assistantMsg: {
-        alignSelf: 'flex-start',
-        backgroundColor: '#E5E5EA',
-        borderRadius: 15,
-        padding: 8,
-        marginVertical: 4,
-        maxWidth: '80%',
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderTopWidth: 1,
-        borderColor: '#ccc',
-        paddingVertical: 6,
-        paddingHorizontal: 10,
-    },
-    input: {
-        flex: 1,
-        marginRight: 8,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 20,
-        paddingHorizontal: 12,
-        height: 40,
-    },
+  flex: { flex: 1 },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  headerTitle: {
+    ...typography.h3,
+    color: colors.text,
+    flex: 1,
+  },
+  closeButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  closeText: {
+    ...typography.label,
+    color: colors.primary,
+    fontSize: 16,
+  },
+  disclaimerRow: {
+    alignItems: "center",
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surfaceElevated,
+  },
+  disclaimer: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  messagesContainer: {
+    flexGrow: 1,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  userMsg: {
+    alignSelf: "flex-end",
+    backgroundColor: colors.primary + "18",
+    borderRadius: radii.md,
+    borderBottomRightRadius: radii.sm,
+    padding: spacing.sm,
+    maxWidth: "80%",
+  },
+  assistantMsg: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    borderBottomLeftRadius: radii.sm,
+    padding: spacing.sm,
+    maxWidth: "85%",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  userText: {
+    ...typography.body,
+    color: colors.text,
+  },
+  assistantText: {
+    ...typography.body,
+    color: colors.text,
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
+  statusText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+  },
+  errorText: {
+    ...typography.bodySmall,
+    color: colors.error,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    borderTopWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    gap: spacing.sm,
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    maxHeight: 100,
+    ...typography.body,
+    color: colors.text,
+  },
+  sendButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+  },
+  sendDisabled: {
+    opacity: 0.4,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  sendText: {
+    ...typography.label,
+    color: "#fff",
+  },
 });
