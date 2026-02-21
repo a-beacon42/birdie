@@ -1,7 +1,14 @@
 """Service layer for bird data operations against Cosmos DB."""
 
+import time
+
 from app.models.bird import Bird, BirdSummary, DataVersion
 from app.services.cosmos import get_birds_container
+
+# In-memory cache for families (static data — rarely changes).
+_families_cache: list[dict] | None = None
+_families_cache_ts: float = 0.0
+_FAMILIES_TTL: float = 3600  # refresh once per hour
 
 
 def query_birds(
@@ -92,7 +99,13 @@ def get_bird_by_species_code(species_code: str) -> Bird | None:
 
 
 def get_unique_families() -> list[dict]:
-    """Return distinct family codes and common names."""
+    """Return distinct family codes and common names (cached)."""
+    global _families_cache, _families_cache_ts
+
+    now = time.monotonic()
+    if _families_cache is not None and (now - _families_cache_ts) < _FAMILIES_TTL:
+        return _families_cache
+
     container = get_birds_container()
 
     query = (
@@ -105,6 +118,9 @@ def get_unique_families() -> list[dict]:
             enable_cross_partition_query=True,
         )
     )
+
+    _families_cache = items
+    _families_cache_ts = now
     return items
 
 

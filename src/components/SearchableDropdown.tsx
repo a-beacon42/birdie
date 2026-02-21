@@ -6,7 +6,7 @@
  * in a Modal fails to stop propagation → search TextInput can't receive focus).
  */
 
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
     View,
     Text,
@@ -17,6 +17,7 @@ import {
     StyleSheet,
     Dimensions,
     Keyboard,
+    Platform,
     type LayoutRectangle,
     type ListRenderItemInfo,
 } from "react-native";
@@ -73,8 +74,28 @@ function SearchableDropdownInner<T>(props: SearchableDropdownProps<T>) {
     const [visible, setVisible] = useState(false);
     const [searchText, setSearchText] = useState("");
     const [anchorLayout, setAnchorLayout] = useState<LayoutRectangle | null>(null);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
     const anchorRef = useRef<View>(null);
     const searchInputRef = useRef<TextInput>(null);
+
+    /* ---- keyboard tracking --------------------------------------- */
+
+    useEffect(() => {
+        const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+        const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+        const onShow = Keyboard.addListener(showEvent, (e) => {
+            setKeyboardHeight(e.endCoordinates.height);
+        });
+        const onHide = Keyboard.addListener(hideEvent, () => {
+            setKeyboardHeight(0);
+        });
+
+        return () => {
+            onShow.remove();
+            onHide.remove();
+        };
+    }, []);
 
     /* ---- derived ------------------------------------------------- */
 
@@ -158,19 +179,39 @@ function SearchableDropdownInner<T>(props: SearchableDropdownProps<T>) {
     const screenH = Dimensions.get("window").height;
     let overlayStyle: any = {};
     if (anchorLayout) {
-        const top = anchorLayout.y + anchorLayout.height + 4;
-        const availableBelow = screenH - top - 16;
-        const dropdownHeight = Math.min(maxHeight, availableBelow > 120 ? availableBelow : maxHeight);
-        const showAbove = availableBelow < 120;
+        const GAP = 4;
+        const PAD = 8;
+        const anchorTop = anchorLayout.y;
+        const anchorBottom = anchorLayout.y + anchorLayout.height;
+        const visibleBottom = screenH - keyboardHeight;
+
+        const spaceBelow = visibleBottom - anchorBottom - GAP - PAD;
+        const spaceAbove = anchorTop - GAP - PAD;
+
+        let posTop: number | undefined;
+        let posBottom: number | undefined;
+        let dropdownHeight: number;
+
+        if (spaceBelow >= 120) {
+            // Enough room below the anchor, above the keyboard
+            posTop = anchorBottom + GAP;
+            dropdownHeight = Math.min(maxHeight, spaceBelow);
+        } else if (spaceAbove >= 120) {
+            // Flip above the anchor
+            posBottom = screenH - anchorTop + GAP;
+            dropdownHeight = Math.min(maxHeight, spaceAbove);
+        } else {
+            // Neither side has room — pin to top of screen, fill visible area
+            posTop = PAD;
+            dropdownHeight = Math.min(maxHeight, visibleBottom - PAD * 2);
+        }
 
         overlayStyle = {
             position: "absolute" as const,
             left: anchorLayout.x,
             width: anchorLayout.width,
             maxHeight: dropdownHeight,
-            ...(showAbove
-                ? { bottom: screenH - anchorLayout.y + 4 }
-                : { top }),
+            ...(posTop !== undefined ? { top: posTop } : { bottom: posBottom }),
         };
     }
 
