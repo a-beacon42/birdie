@@ -80,9 +80,6 @@ const FlashCard: React.FC<FlashCardProps> = ({
           cachePolicy="disk"
           onError={() => setImageError(true)}
         />
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>Tap to flip</Text>
-        </View>
       </Animated.View>
 
       {/* ---- Back: image + info ---- */}
