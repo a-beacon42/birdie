@@ -9,13 +9,12 @@ import React from "react";
 import {
     ActivityIndicator,
     Modal,
-    Platform,
     Pressable,
     StyleSheet,
     Text,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { colors, spacing, radii, typography } from "../theme";
 
@@ -32,9 +31,11 @@ const WikipediaModal: React.FC<WikipediaModalProps> = ({
     url,
     title,
 }) => {
+    const insets = useSafeAreaInsets();
+
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-            <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+            <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
                 {/* Header — explicit padding ensures it clears the notch */}
                 <View style={styles.header}>
                     <Text style={styles.headerTitle} numberOfLines={1}>
@@ -66,7 +67,7 @@ const WikipediaModal: React.FC<WikipediaModalProps> = ({
                         <Text style={styles.emptyText}>No Wikipedia page available.</Text>
                     </View>
                 )}
-            </SafeAreaView>
+            </View>
         </Modal>
     );
 };
@@ -84,7 +85,6 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
-        paddingTop: Platform.OS === "ios" ? spacing.sm : spacing.md,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
         backgroundColor: colors.surface,
