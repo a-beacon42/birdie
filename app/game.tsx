@@ -284,7 +284,8 @@ const styles = StyleSheet.create({
   },
   cardSection: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
+    paddingTop: spacing.xxl,
   },
   cardArea: {
     alignItems: "center",
