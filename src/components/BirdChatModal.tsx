@@ -21,7 +21,7 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Markdown } from "react-native-remark";
+import MarkdownText from "./MarkdownText";
 import { ChatMessage, sendChatMessage } from "../api/birdieApi";
 import { colors, spacing, radii, typography } from "../theme";
 
@@ -166,7 +166,7 @@ const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
                                 {m.role === "user" ? (
                                     <Text style={styles.userText}>{m.content}</Text>
                                 ) : (
-                                    <Text style={styles.userText}>{m.content}</Text>
+                                    <MarkdownText>{m.content}</MarkdownText>
                                 )}
                             </View>
                         ))}
