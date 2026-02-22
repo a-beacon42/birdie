@@ -6,7 +6,7 @@
  */
 
 import { create } from "zustand";
-import type { Bird, BirdSummary } from "../types/bird";
+import type { BirdSummary } from "../types/bird";
 
 export type QuizMode = "flashcard" | "multiple-choice" | "audio";
 export type AnswerResult = "correct" | "incorrect" | "skipped";
@@ -43,6 +43,8 @@ interface GameState {
     prevBird: () => void;
     goToIndex: (index: number) => void;
     recordAnswer: (speciesCode: string, result: AnswerResult, timeMs: number) => void;
+    markUnansweredAsSkipped: () => void;
+    clearAnswers: () => void;
     setQuizMode: (mode: QuizMode) => void;
 
     // --- Derived ---
@@ -98,10 +100,31 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     goToIndex: (index) => set({ currentIndex: index }),
 
+    clearAnswers: () =>
+        set({
+            answers: [],
+            currentIndex: 0,
+        }),
+
     recordAnswer: (speciesCode, result, timeMs) =>
-        set((state) => ({
-            answers: [...state.answers, { speciesCode, result, timeMs }],
-        })),
+        set((state) => {
+            const idx = state.answers.findIndex((a) => a.speciesCode === speciesCode);
+            if (idx >= 0) {
+                const updated = [...state.answers];
+                updated[idx] = { speciesCode, result, timeMs };
+                return { answers: updated };
+            }
+            return { answers: [...state.answers, { speciesCode, result, timeMs }] };
+        }),
+
+    markUnansweredAsSkipped: () =>
+        set((state) => {
+            const answered = new Set(state.answers.map((a) => a.speciesCode));
+            const skipped = state.birds
+                .filter((b) => !answered.has(b.species_code))
+                .map((b) => ({ speciesCode: b.species_code, result: "skipped" as AnswerResult, timeMs: 0 }));
+            return { answers: [...state.answers, ...skipped] };
+        }),
 
     setQuizMode: (mode) => set({ quizMode: mode }),
 
