@@ -11,6 +11,7 @@ interface ScoreBarProps {
     total: number;
     correct: number;
     incorrect: number;
+    skipped: number;
     familyLabel?: string;
     regionLabel?: string;
 }
@@ -20,6 +21,7 @@ const ScoreBar: React.FC<ScoreBarProps> = ({
     total,
     correct,
     incorrect,
+    skipped,
     familyLabel,
     regionLabel,
 }) => {
@@ -30,9 +32,7 @@ const ScoreBar: React.FC<ScoreBarProps> = ({
         <View style={styles.container}>
             <View style={styles.statsRow}>
                 <Text style={[styles.stat, { color: colors.incorrect }]}>✗ {incorrect}</Text>
-                <Text style={styles.position}>
-                    {current} / {total}
-                </Text>
+                <Text style={[styles.stat, { color: colors.textMuted }]}>⊘ {skipped}</Text>
                 <Text style={[styles.stat, { color: colors.correct }]}>✓ {correct}</Text>
             </View>
             <View style={styles.track}>

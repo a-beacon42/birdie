@@ -11,12 +11,19 @@ import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { colors, spacing, radii, typography, shadows } from "../theme";
 
+interface DeckPosition {
+  idx: number;
+  deckSize: number;
+}
+
 interface FlashCardProps {
   imageUrl: string;
   commonName: string;
   latinName: string;
   speciesCode: string;
   cardWidth?: number;
+  /** Shows "{idx}/{deckSize}" badge in the top-right corner */
+  deckPosition?: DeckPosition;
   /** Called when the user taps "Ask AI about this bird" */
   onAskAI?: () => void;
   /** Called when the user taps the (i) info button */
@@ -30,6 +37,7 @@ const FlashCard: React.FC<FlashCardProps> = ({
   commonName,
   latinName,
   cardWidth = 350,
+  deckPosition,
   onAskAI,
   onInfoPress,
 }) => {
@@ -72,6 +80,7 @@ const FlashCard: React.FC<FlashCardProps> = ({
     <Pressable onPress={flipCard} style={[styles.container, { width: cardWidth, height: cardHeight }]}>
       {/* ---- Front: image only ---- */}
       <Animated.View
+        pointerEvents={flipped ? "none" : "auto"}
         style={[
           styles.card,
           { width: cardWidth, height: cardHeight },
@@ -87,10 +96,18 @@ const FlashCard: React.FC<FlashCardProps> = ({
           cachePolicy="disk"
           onError={() => setImageError(true)}
         />
+        {deckPosition && (
+          <View style={styles.positionBadge}>
+            <Text style={styles.positionText}>
+              {deckPosition.idx}/{deckPosition.deckSize}
+            </Text>
+          </View>
+        )}
       </Animated.View>
 
       {/* ---- Back: image + info ---- */}
       <Animated.View
+        pointerEvents={flipped ? "auto" : "none"}
         style={[
           styles.card,
           { width: cardWidth, height: cardHeight },
@@ -106,13 +123,20 @@ const FlashCard: React.FC<FlashCardProps> = ({
             cachePolicy="disk"
           />
         </View>
+        {deckPosition && (
+          <View style={styles.positionBadge}>
+            <Text style={styles.positionText}>
+              {deckPosition.idx}/{deckPosition.deckSize}
+            </Text>
+          </View>
+        )}
         <View style={styles.infoArea}>
           <Text style={styles.commonName}>{commonName}</Text>
           <Text style={styles.latinName}>{latinName}</Text>
           <View style={styles.buttonRow}>
             {onAskAI && (
               <Pressable onPress={handleAskAI} style={styles.chatButton}>
-                <Text style={styles.chatButtonText}>Ask AI</Text>
+                <Text style={styles.chatButtonText}>Ask 🦉 AI</Text>
               </Pressable>
             )}
             {onInfoPress && (
@@ -204,6 +228,20 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: colors.primary,
     lineHeight: 24,
+  },
+  positionBadge: {
+    position: "absolute",
+    top: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radii.full,
+  },
+  positionText: {
+    ...typography.caption,
+    color: "#fff",
+    fontSize: 13,
   },
   badge: {
     position: "absolute",

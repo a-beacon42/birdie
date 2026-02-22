@@ -18,12 +18,14 @@ interface ResultsModalProps {
     visible: boolean;
     onClose: () => void;
     onEndGame: () => void;
+    onResetGame: () => void;
 }
 
 const ResultsModal: React.FC<ResultsModalProps> = ({
     visible,
     onClose,
     onEndGame,
+    onResetGame,
 }) => {
     const { answers, birds } = useGameStore();
     const correct = answers.filter((a) => a.result === "correct").length;
@@ -85,9 +87,9 @@ const ResultsModal: React.FC<ResultsModalProps> = ({
                             </Pressable>
                             <Pressable
                                 style={[styles.button, styles.buttonSecondary]}
-                                onPress={onClose}
+                                onPress={onResetGame}
                             >
-                                <Text style={styles.buttonSecondaryText}>Review Cards</Text>
+                                <Text style={styles.buttonSecondaryText}>Reset Game</Text>
                             </Pressable>
                         </View>
                     </View>
