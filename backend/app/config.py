@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     api_key: str = ""  # Required for chat endpoint; set in .env
 
     # Rate limiting
-    chat_rate_limit: str = "10/minute"  # slowapi rate string
+    chat_rate_limit: str = "20/hour"  # slowapi rate string
 
     # CORS
     allowed_origins: str = "http://localhost:8081,http://localhost:19006"
