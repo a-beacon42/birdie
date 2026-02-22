@@ -4,8 +4,12 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@env": ["./node_modules/react-native-dotenv"]
+      "@env": [
+        "./node_modules/react-native-dotenv"
+      ]
     }
   },
-  "exclude": ["eslint.config.js"]
+  "exclude": [
+    "eslint.config.js"
+  ]
 }
