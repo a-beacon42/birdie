@@ -7,13 +7,13 @@
 
 import React, { useState, useCallback } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  ActivityIndicator,
-  Alert,
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    Pressable,
+    ActivityIndicator,
+    Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -139,7 +139,7 @@ export default function HomeScreen() {
             >
                 {/* Header */}
                 <View style={styles.header}>
-                    <Text style={styles.title}>Birdie</Text>
+                    <Text style={styles.title}>birdie</Text>
                     {/* <Text style={styles.subtitle}>Bird ID Flashcards</Text> */}
                 </View>
 
