@@ -42,7 +42,9 @@ def get_database() -> DatabaseProxy:
         client = get_cosmos_client()
         if settings.cosmos_key:
             # With key auth we have management-plane access — auto-create if missing
-            _database = client.create_database_if_not_exists(id=settings.cosmos_database)
+            _database = client.create_database_if_not_exists(
+                id=settings.cosmos_database
+            )
         else:
             # Managed identity only has data-plane access — DB must already exist
             _database = client.get_database_client(settings.cosmos_database)
