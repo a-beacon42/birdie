@@ -5,13 +5,13 @@
  * tracks per-card timing, and shows results at the end.
  */
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
-  Dimensions,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,12 +24,15 @@ import ResultsModal from "../src/components/ResultsModal";
 import BirdChatModal from "../src/components/BirdChatModal";
 import WikipediaModal from "../src/components/WikipediaModal";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_WIDTH = Math.min(SCREEN_WIDTH - spacing.lg * 2, 400);
 const SWIPE_THRESHOLD = 50;
 
 export default function GameScreen() {
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
+  const cardWidth = useMemo(
+    () => Math.min(screenWidth - spacing.lg * 2, 400),
+    [screenWidth],
+  );
   const {
     birds,
     currentIndex,
@@ -157,7 +160,7 @@ export default function GameScreen() {
                 commonName={currentBird.com_name}
                 latinName={currentBird.sci_name}
                 speciesCode={currentBird.species_code}
-                cardWidth={CARD_WIDTH}
+                cardWidth={cardWidth}
                 onAskAI={() => setChatBirdName(currentBird.com_name)}
                 onInfoPress={
                   currentBird.wikipedia_url ? handleInfoPress : undefined

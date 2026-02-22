@@ -13,9 +13,9 @@ import {
     ScrollView,
     Pressable,
     ActivityIndicator,
-    Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { showAlert } from "../src/utils/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, radii, typography, shadows } from "../src/theme";
 import { useFamilies, useSubnational1, useSubnational2 } from "../src/hooks/useApi";
@@ -68,7 +68,7 @@ export default function HomeScreen() {
             if (regionCode) {
                 speciesCodes = await getSpeciesList(regionCode);
                 if (speciesCodes.length === 0) {
-                    Alert.alert("No birds found", "No species recorded for this region.");
+                    showAlert("No birds found", "No species recorded for this region.");
                     setCreating(false);
                     return;
                 }
@@ -87,7 +87,7 @@ export default function HomeScreen() {
             const birds = await fetchBirds(params);
 
             if (birds.length === 0) {
-                Alert.alert("No birds found", "Try different filters.");
+                showAlert("No birds found", "Try different filters.");
                 setCreating(false);
                 return;
             }
@@ -116,7 +116,7 @@ export default function HomeScreen() {
             startGame(deck, "flashcard", { familyLabel, regionLabel });
             router.push("/game");
         } catch (err: any) {
-            Alert.alert("Error", err.message || "Failed to create game");
+            showAlert("Error", err.message || "Failed to create game");
         } finally {
             setCreating(false);
         }

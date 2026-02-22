@@ -1,10 +1,13 @@
 """Birdie API — FastAPI application entry point."""
 
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -57,3 +60,11 @@ app.include_router(chat.router)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+# --- Serve the Expo web build if the static directory exists ---
+# In production the multi-stage Docker build copies the web export to ./static.
+# Mounted AFTER API routes so /api/* and /health are handled by FastAPI first.
+_static_dir = Path(__file__).resolve().parent.parent / "static"
+if _static_dir.is_dir():
+    app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="web")

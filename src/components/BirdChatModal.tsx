@@ -9,7 +9,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -20,6 +19,7 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { showAlert } from "../utils/alert";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MarkdownText from "./MarkdownText";
 import { ChatMessage, sendChatMessage } from "../api/birdieApi";
@@ -98,7 +98,7 @@ const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
         const text = input.trim();
         if (!text || loading) return;
         if (limited()) {
-            Alert.alert("Slow down!", `Limit of ${MAX_PER_HOUR} messages per hour reached.`);
+            showAlert("Slow down!", `Limit of ${MAX_PER_HOUR} messages per hour reached.`);
             return;
         }
 

@@ -1,8 +1,17 @@
-"""Proxy service for Azure OpenAI chat completions — keeps the API key server-side."""
+"""Proxy service for Azure OpenAI chat completions — keeps credentials server-side.
+
+Supports two authentication modes:
+  1. API key — set AZURE_OPENAI_API_KEY in env (local dev)
+  2. Managed identity — leave AZURE_OPENAI_API_KEY empty; uses DefaultAzureCredential (production)
+"""
 
 import httpx
 
 from app.config import settings
+
+# Cached token credential (only created once, when using managed identity)
+_credential = None
+_OPENAI_SCOPE = "https://cognitiveservices.azure.com/.default"
 
 # System prompt enforced server-side — never accepted from the client.
 SYSTEM_PROMPT = (
@@ -15,6 +24,22 @@ SYSTEM_PROMPT = (
     "If there are common lookalikes, explain how to tell them apart. "
     "Limit responses to 150 words or fewer."
 )
+
+
+def _get_auth_headers() -> dict[str, str]:
+    """Return authentication headers for Azure OpenAI — API key or Bearer token."""
+    if settings.azure_openai_api_key:
+        return {"api-key": settings.azure_openai_api_key}
+
+    # Managed identity — acquire a Bearer token
+    global _credential
+    if _credential is None:
+        from azure.identity import DefaultAzureCredential
+
+        _credential = DefaultAzureCredential()
+
+    token = _credential.get_token(_OPENAI_SCOPE)
+    return {"Authorization": f"Bearer {token.token}"}
 
 
 async def send_chat(bird_name: str, messages: list[dict]) -> dict:
@@ -30,7 +55,7 @@ async def send_chat(bird_name: str, messages: list[dict]) -> dict:
 
     headers = {
         "Content-Type": "application/json",
-        "api-key": settings.azure_openai_api_key,
+        **_get_auth_headers(),
     }
 
     # Build full message list with server-controlled system prompt

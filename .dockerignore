@@ -1,0 +1,32 @@
+# Dependencies (will be installed fresh in the container)
+node_modules/
+backend/.venv/
+__pycache__/
+
+# Build outputs (rebuilt inside Docker)
+dist/
+web-build/
+
+# Expo cache
+.expo/
+
+# Git
+.git/
+.github/
+
+# IDE / OS
+.DS_Store
+*.swp
+.vscode/
+
+# Environment files (secrets must be set via Container App env vars)
+.env
+.env*.local
+backend/.env
+
+# ETL tools & data (not needed at runtime)
+tools/
+docs/
+
+# Test files
+backend/tests/

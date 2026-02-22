@@ -15,9 +15,9 @@ import {
     Modal,
     Pressable,
     StyleSheet,
-    Dimensions,
     Keyboard,
     Platform,
+    useWindowDimensions,
     type LayoutRectangle,
     type ListRenderItemInfo,
 } from "react-native";
@@ -176,7 +176,7 @@ function SearchableDropdownInner<T>(props: SearchableDropdownProps<T>) {
 
     /* ---- overlay position ---------------------------------------- */
 
-    const screenH = Dimensions.get("window").height;
+    const { height: screenH } = useWindowDimensions();
     let overlayStyle: any = {};
     if (anchorLayout) {
         const GAP = 4;

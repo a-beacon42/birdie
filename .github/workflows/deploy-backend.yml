@@ -1,10 +1,16 @@
-name: Deploy Backend API
+name: Deploy Birdie (API + Web)
 
 on:
   push:
     branches: [main]
     paths:
       - "backend/**"
+      - "app/**"
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "Dockerfile"
+      - "app.json"
   workflow_dispatch:
 
 env:
@@ -35,10 +41,11 @@ jobs:
           IMAGE_TAG="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
           IMAGE_LATEST="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest"
 
+          # Multi-stage build from repo root — Stage 1 builds web, Stage 2 builds API
           docker build \
             -t "$IMAGE_TAG" \
             -t "$IMAGE_LATEST" \
-            ./backend
+            .
 
           docker push "$IMAGE_TAG"
           docker push "$IMAGE_LATEST"
