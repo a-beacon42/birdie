@@ -13,8 +13,5 @@ COPY . .
 RUN adduser --disabled-password --gecos "" appuser
 USER appuser
 
-# Expose port 8000 (Azure Container Apps will route to this)
 EXPOSE 8000
-
-# Run with uvicorn
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

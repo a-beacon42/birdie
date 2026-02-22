@@ -3,13 +3,19 @@
  */
 
 import axios, { AxiosInstance } from "axios";
+import { Platform } from "react-native";
 import { BACKEND_URL, BACKEND_API_KEY } from "@env";
 import type { Bird, BirdSummary, BirdFamily } from "../types/bird";
 
 export type { Bird, BirdSummary, BirdFamily };
 
+// On web, default to same-origin (empty string) so API calls are relative.
+// On native, default to localhost for development.
+const defaultBaseURL =
+  Platform.OS === "web" ? "" : "http://localhost:8000";
+
 export const birdieApi: AxiosInstance = axios.create({
-  baseURL: BACKEND_URL || "http://localhost:8000",
+  baseURL: BACKEND_URL || defaultBaseURL,
   headers: {
     "Content-Type": "application/json",
     ...(BACKEND_API_KEY ? { "X-API-Key": BACKEND_API_KEY } : {}),

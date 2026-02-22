@@ -1,12 +1,20 @@
 /**
  * AudioPlayer — Plays bird audio from Xeno-canto URLs.
  * Shows a simple play/pause button with attribution.
+ *
+ * On web, uses an HTML5 <audio> element for reliable playback.
+ * On native, uses expo-av Audio.Sound.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
-import { Audio } from "expo-av";
+import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { colors, spacing, radii, typography } from "../theme";
+
+// Only import expo-av on native — web uses HTML5 <audio>
+const Audio = Platform.OS !== "web"
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    ? require("expo-av").Audio
+    : null;
 
 interface AudioPlayerProps {
     audioUrl: string;
@@ -14,59 +22,106 @@ interface AudioPlayerProps {
 }
 
 const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, attribution }) => {
-    const soundRef = useRef<Audio.Sound | null>(null);
+    // --- Native: expo-av Sound ref ---
+    const soundRef = useRef<any>(null);
+    // --- Web: HTML5 Audio ref ---
+    const htmlAudioRef = useRef<HTMLAudioElement | null>(null);
+
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         return () => {
             // Cleanup on unmount
-            if (soundRef.current) {
-                soundRef.current.unloadAsync();
+            if (Platform.OS === "web") {
+                if (htmlAudioRef.current) {
+                    htmlAudioRef.current.pause();
+                    htmlAudioRef.current = null;
+                }
+            } else {
+                if (soundRef.current) {
+                    soundRef.current.unloadAsync();
+                }
             }
         };
     }, []);
 
     // Reset when URL changes
     useEffect(() => {
-        if (soundRef.current) {
-            soundRef.current.unloadAsync();
-            soundRef.current = null;
-            setIsPlaying(false);
+        if (Platform.OS === "web") {
+            if (htmlAudioRef.current) {
+                htmlAudioRef.current.pause();
+                htmlAudioRef.current = null;
+                setIsPlaying(false);
+            }
+        } else {
+            if (soundRef.current) {
+                soundRef.current.unloadAsync();
+                soundRef.current = null;
+                setIsPlaying(false);
+            }
         }
     }, [audioUrl]);
 
     const togglePlayback = useCallback(async () => {
         if (!audioUrl) return;
 
-        try {
-            if (soundRef.current) {
-                if (isPlaying) {
-                    await soundRef.current.pauseAsync();
-                    setIsPlaying(false);
-                } else {
-                    await soundRef.current.playAsync();
-                    setIsPlaying(true);
-                }
-            } else {
-                setIsLoading(true);
-                const { sound } = await Audio.Sound.createAsync(
-                    { uri: audioUrl },
-                    { shouldPlay: true }
-                );
-                soundRef.current = sound;
-                setIsPlaying(true);
-                setIsLoading(false);
-
-                sound.setOnPlaybackStatusUpdate((status) => {
-                    if (status.isLoaded && status.didJustFinish) {
+        if (Platform.OS === "web") {
+            // --- Web: HTML5 Audio ---
+            try {
+                if (htmlAudioRef.current) {
+                    if (isPlaying) {
+                        htmlAudioRef.current.pause();
                         setIsPlaying(false);
+                    } else {
+                        await htmlAudioRef.current.play();
+                        setIsPlaying(true);
                     }
-                });
+                } else {
+                    setIsLoading(true);
+                    const audio = new window.Audio(audioUrl);
+                    audio.addEventListener("ended", () => setIsPlaying(false));
+                    audio.addEventListener("canplaythrough", () => setIsLoading(false), { once: true });
+                    htmlAudioRef.current = audio;
+                    await audio.play();
+                    setIsPlaying(true);
+                    setIsLoading(false);
+                }
+            } catch (err) {
+                console.error("Audio playback error:", err);
+                setIsLoading(false);
             }
-        } catch (err) {
-            console.error("Audio playback error:", err);
-            setIsLoading(false);
+        } else {
+            // --- Native: expo-av ---
+            try {
+                if (soundRef.current) {
+                    if (isPlaying) {
+                        await soundRef.current.pauseAsync();
+                        setIsPlaying(false);
+                    } else {
+                        await soundRef.current.playAsync();
+                        setIsPlaying(true);
+                    }
+                } else {
+                    setIsLoading(true);
+                    const { sound } = await Audio.Sound.createAsync(
+                        { uri: audioUrl },
+                        { shouldPlay: true }
+                    );
+                    soundRef.current = sound;
+                    setIsPlaying(true);
+                    setIsLoading(false);
+
+                    sound.setOnPlaybackStatusUpdate((status: any) => {
+                        if (status.isLoaded && status.didJustFinish) {
+                            setIsPlaying(false);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("Audio playback error:", err);
+                setIsLoading(false);
+            }
         }
     }, [audioUrl, isPlaying]);
 

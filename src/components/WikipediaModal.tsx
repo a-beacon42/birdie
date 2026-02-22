@@ -3,20 +3,28 @@
  *
  * Uses SafeAreaView with explicit edges and generous tap targets to ensure
  * the Done button is always visible and tappable on all devices.
+ *
+ * On web, falls back to an <iframe> since react-native-webview has no web support.
  */
 
 import React from "react";
 import {
     ActivityIndicator,
     Modal,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { WebView } from "react-native-webview";
 import { colors, spacing, radii, typography } from "../theme";
+
+// react-native-webview has no web support — only import on native
+const WebView = Platform.OS !== "web"
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    ? require("react-native-webview").WebView
+    : null;
 
 interface WikipediaModalProps {
     visible: boolean;
@@ -50,18 +58,26 @@ const WikipediaModal: React.FC<WikipediaModalProps> = ({
                     </Pressable>
                 </View>
 
-                {/* WebView */}
+                {/* Content — iframe on web, WebView on native */}
                 {url ? (
-                    <WebView
-                        source={{ uri: url }}
-                        style={styles.webview}
-                        startInLoadingState
-                        renderLoading={() => (
-                            <View style={styles.loading}>
-                                <ActivityIndicator size="large" color={colors.primary} />
-                            </View>
-                        )}
-                    />
+                    Platform.OS === "web" ? (
+                        <iframe
+                            src={url}
+                            title={title || "Wikipedia"}
+                            style={{ flex: 1, border: "none", width: "100%", height: "100%" }}
+                        />
+                    ) : WebView ? (
+                        <WebView
+                            source={{ uri: url }}
+                            style={styles.webview}
+                            startInLoadingState
+                            renderLoading={() => (
+                                <View style={styles.loading}>
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                </View>
+                            )}
+                        />
+                    ) : null
                 ) : (
                     <View style={styles.emptyContainer}>
                         <Text style={styles.emptyText}>No Wikipedia page available.</Text>

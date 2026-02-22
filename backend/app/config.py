@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     # Cosmos DB
     cosmos_endpoint: str = ""
-    cosmos_key: str = ""
+    cosmos_key: str = ""  # Leave empty to use managed identity (DefaultAzureCredential)
     cosmos_database: str = "birdie"
 
     # eBird API
@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     # Azure OpenAI
     azure_openai_endpoint: str = ""
-    azure_openai_api_key: str = ""
+    azure_openai_api_key: str = ""  # Leave empty to use managed identity
     azure_openai_deployment_name: str = ""
     azure_openai_api_version: str = "2025-01-01-preview"
 
@@ -27,7 +27,9 @@ class Settings(BaseSettings):
     chat_rate_limit: str = "20/hour"  # slowapi rate string
 
     # CORS
-    allowed_origins: str = "http://localhost:8081,http://localhost:19006"
+    allowed_origins: str = (
+        "http://localhost:8081,http://localhost:19006,http://localhost:8000"
+    )
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
