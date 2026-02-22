@@ -1,5 +1,5 @@
 .env
-.env.*
+.env.migration
 __pycache__/
 *.pyc
 *.pyo
