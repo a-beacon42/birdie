@@ -14,6 +14,7 @@ interface ScoreBarProps {
     skipped: number;
     familyLabel?: string;
     regionLabel?: string;
+    difficultyLabel?: string;
 }
 
 const ScoreBar: React.FC<ScoreBarProps> = ({
@@ -24,9 +25,10 @@ const ScoreBar: React.FC<ScoreBarProps> = ({
     skipped,
     familyLabel,
     regionLabel,
+    difficultyLabel,
 }) => {
     const progress = total > 0 ? current / total : 0;
-    const filterText = [familyLabel, regionLabel].filter(Boolean).join(" — ");
+    const filterText = [difficultyLabel, familyLabel, regionLabel].filter(Boolean).join(" — ");
 
     return (
         <View style={styles.container}>

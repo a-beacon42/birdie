@@ -20,6 +20,7 @@ export interface SessionAnswer {
 export interface GameFilters {
     familyLabel?: string;
     regionLabel?: string;
+    difficultyLabel?: string;
 }
 
 
