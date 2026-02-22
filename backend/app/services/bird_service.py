@@ -34,7 +34,8 @@ def query_birds(
     where_clause = (" WHERE " + " AND ".join(conditions)) if conditions else ""
     query = (
         f"SELECT c.id, c.species_code, c.sci_name, c.com_name, "
-        f"c.family_code, c.family_com_name, c.images, c.wikipedia_url "
+        f"c.family_code, c.family_com_name, c.images, c.wikipedia_url, "
+        f"c.global_frequency, c.lookalikes "
         f"FROM c{where_clause} "
         f"ORDER BY c.sort_order "
         f"OFFSET @offset LIMIT @limit"
@@ -75,6 +76,8 @@ def query_birds(
                 family_com_name=item["family_com_name"],
                 image_url=image_url,
                 wikipedia_url=item.get("wikipedia_url", ""),
+                global_frequency=item.get("global_frequency", 0.0),
+                lookalike_count=len(item.get("lookalikes", [])),
             )
         )
     return results

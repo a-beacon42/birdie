@@ -50,6 +50,7 @@ def run() -> None:
     )
     total_with_audio = sum(1 for s in species if s.get("audio_url"))
     total_with_wiki = sum(1 for s in species if s.get("wikipedia_url"))
+    total_with_freq = sum(1 for s in species if s.get("global_frequency", 0) > 0)
 
     pct = lambda n: f"{n/total*100:.1f}%" if total else "N/A"
 
@@ -59,6 +60,7 @@ def run() -> None:
     print(f"  With iNat images:     {total_with_inat} ({pct(total_with_inat)})")
     print(f"  With audio:           {total_with_audio} ({pct(total_with_audio)})")
     print(f"  With Wikipedia URLs:  {total_with_wiki} ({pct(total_with_wiki)})")
+    print(f"  With frequency data:  {total_with_freq} ({pct(total_with_freq)})")
     print(f"  Data version:         {data_version}")
 
 

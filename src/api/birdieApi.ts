@@ -82,6 +82,23 @@ export const getSpeciesList = async (
 
 // --- Chat proxy ---
 
+export type Difficulty = "easy" | "medium" | "hard";
+
+export interface DeckRequest {
+  family?: string;
+  species_codes?: string[];
+  difficulty?: Difficulty;
+  region_code?: string;
+  limit?: number;
+}
+
+export const createDeck = async (req: DeckRequest): Promise<BirdSummary[]> => {
+  const res = await birdieApi.post("/api/birds/deck", req);
+  return res.data;
+};
+
+// --- Chat messages ---
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;

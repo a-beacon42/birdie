@@ -5,6 +5,7 @@ import re
 from fastapi import APIRouter, HTTPException, Path
 
 from app.services.ebird_service import (
+    get_region_frequency,
     get_species_list,
     get_subnational1_regions,
     get_subnational2_regions,
@@ -59,5 +60,22 @@ async def species_list(
     _validate_region_code(region_code, "Region code")
     try:
         return await get_species_list(region_code)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+
+@router.get("/frequency/{region_code}")
+async def region_frequency(
+    region_code: str = Path(min_length=2, max_length=15),
+) -> dict[str, float]:
+    """Get relative observation frequency per species for a region.
+
+    Returns a dict mapping species_code → relative frequency (0.0–1.0)
+    based on recent eBird observations.  Results are cached server-side
+    for ~1 hour.
+    """
+    _validate_region_code(region_code, "Region code")
+    try:
+        return await get_region_frequency(region_code)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))

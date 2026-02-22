@@ -25,7 +25,7 @@ def main():
     parser = argparse.ArgumentParser(description="Birdie ETL Pipeline")
     parser.add_argument(
         "--from-step",
-        choices=["a", "b", "c", "d", "e", "f"],
+        choices=["a", "b", "c", "d", "e", "f", "g"],
         default="a",
         help="Resume from a specific step (default: a)",
     )
@@ -36,7 +36,7 @@ def main():
     )
     args = parser.parse_args()
 
-    steps = ["a", "b", "c", "d", "e", "f"]
+    steps = ["a", "b", "c", "d", "e", "f", "g"]
     start_idx = steps.index(args.from_step)
     start_time = time.time()
 
@@ -103,6 +103,16 @@ def main():
         import step_f_cosmos_upsert
 
         step_f_cosmos_upsert.run()
+        print()
+
+    # Step G
+    if start_idx <= 6:
+        print("=" * 60)
+        print("STEP G: eBird Global Frequency")
+        print("=" * 60)
+        import step_g_ebird_frequency
+
+        step_g_ebird_frequency.run()
         print()
 
     elapsed = time.time() - start_time

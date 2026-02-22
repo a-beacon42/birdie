@@ -183,6 +183,7 @@ export default function GameScreen() {
           skipped={answers.filter((a) => a.result === "skipped").length}
           familyLabel={filters.familyLabel}
           regionLabel={filters.regionLabel}
+          difficultyLabel={filters.difficultyLabel}
         />
 
         {/* Card + answer row grouped together */}

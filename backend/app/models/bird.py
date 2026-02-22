@@ -33,6 +33,12 @@ class Bird(BaseModel):
     audio_attribution: str = ""
     wikipedia_url: str = ""
     lookalikes: list[str] = Field(default_factory=list)
+    global_frequency: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of eBird checklists worldwide reporting this species (0–1).",
+    )
     data_version: str = ""
 
     @property
@@ -55,6 +61,8 @@ class BirdSummary(BaseModel):
     family_com_name: str
     image_url: str = ""
     wikipedia_url: str = ""
+    global_frequency: float = 0.0
+    lookalike_count: int = 0
 
 
 class ChatMessage(BaseModel):

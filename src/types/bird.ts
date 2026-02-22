@@ -28,6 +28,8 @@ export interface Bird {
     audio_attribution: string;
     wikipedia_url: string;
     lookalikes: string[];
+    /** Fraction of eBird checklists worldwide reporting this species (0–1). */
+    global_frequency: number;
     data_version: string;
 }
 
@@ -41,6 +43,8 @@ export interface BirdSummary {
     family_com_name: string;
     image_url: string;
     wikipedia_url?: string;
+    global_frequency: number;
+    lookalike_count: number;
 }
 
 export interface BirdFamily {

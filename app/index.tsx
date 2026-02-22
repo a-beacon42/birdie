@@ -20,7 +20,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, radii, typography, shadows } from "../src/theme";
 import { useFamilies, useSubnational1, useSubnational2 } from "../src/hooks/useApi";
 import { useGameStore } from "../src/stores/gameStore";
-import { fetchBirds, getSpeciesList } from "../src/api/birdieApi";
+import { createDeck, getSpeciesList } from "../src/api/birdieApi";
+import type { Difficulty } from "../src/api/birdieApi";
 import type { BirdFamily } from "../src/types/bird";
 import SearchableDropdown from "../src/components/SearchableDropdown";
 import allCountries from "../src/data/AllCountries.json";
@@ -29,6 +30,12 @@ type Country = { name: string; code: string };
 type Region = { name: string; code: string };
 
 const CARD_COUNTS = [10, 25, 50] as const;
+const DIFFICULTIES: { key: Difficulty | null; label: string }[] = [
+    { key: null, label: "Any" },
+    { key: "easy", label: "Easy" },
+    { key: "medium", label: "Medium" },
+    { key: "hard", label: "Hard" },
+];
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -40,6 +47,7 @@ export default function HomeScreen() {
     const [selectedCountry, setSelectedCountry] = useState<string>("");
     const [selectedState, setSelectedState] = useState<string>("");
     const [selectedCounty, setSelectedCounty] = useState<string>("");
+    const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty | null>(null);
     const [creating, setCreating] = useState(false);
 
     // API data
@@ -64,7 +72,7 @@ export default function HomeScreen() {
             const regionCode = selectedCounty || selectedState || selectedCountry || null;
 
             // Get species codes from region filter (if any)
-            let speciesCodes: string[] | null = null;
+            let speciesCodes: string[] | undefined;
             if (regionCode) {
                 speciesCodes = await getSpeciesList(regionCode);
                 if (speciesCodes.length === 0) {
@@ -74,27 +82,20 @@ export default function HomeScreen() {
                 }
             }
 
-            // Build query params for the backend
-            const params: {
-                family?: string;
-                species_codes?: string;
-                limit?: number;
-            } = { limit: 500 };
+            // Build deck via the backend (handles difficulty filtering server-side)
+            const deck = await createDeck({
+                family: selectedFamily || undefined,
+                species_codes: speciesCodes,
+                difficulty: selectedDifficulty ?? undefined,
+                region_code: regionCode ?? undefined,
+                limit: cardCount,
+            });
 
-            if (selectedFamily) params.family = selectedFamily;
-            if (speciesCodes) params.species_codes = speciesCodes.join(",");
-
-            const birds = await fetchBirds(params);
-
-            if (birds.length === 0) {
+            if (deck.length === 0) {
                 showAlert("No birds found", "Try different filters.");
                 setCreating(false);
                 return;
             }
-
-            // Shuffle and trim to count
-            const shuffled = [...birds].sort(() => Math.random() - 0.5);
-            const deck = shuffled.slice(0, cardCount);
 
             // Build human-readable filter labels for the game screen
             const familyLabel = selectedFamily
@@ -113,18 +114,23 @@ export default function HomeScreen() {
             const regionLabel =
                 regionParts.length > 0 ? regionParts.join(" — ") : undefined;
 
-            startGame(deck, "flashcard", { familyLabel, regionLabel });
+            const difficultyLabel = selectedDifficulty
+                ? DIFFICULTIES.find((d) => d.key === selectedDifficulty)?.label
+                : undefined;
+
+            startGame(deck, "flashcard", { familyLabel, regionLabel, difficultyLabel });
             router.push("/game");
         } catch (err: any) {
             showAlert("Error", err.message || "Failed to create game");
         } finally {
             setCreating(false);
         }
-    }, [cardCount, selectedFamily, selectedCountry, selectedState, selectedCounty, families, subnational1, subnational2, startGame, router]);
+    }, [cardCount, selectedFamily, selectedDifficulty, selectedCountry, selectedState, selectedCounty, families, subnational1, subnational2, startGame, router]);
 
     const handleClearFilters = useCallback(() => {
         setCardCount(25);
         setSelectedFamily("");
+        setSelectedDifficulty(null);
         setSelectedCountry("");
         setSelectedState("");
         setSelectedCounty("");
@@ -163,6 +169,27 @@ export default function HomeScreen() {
                                     ]}
                                 >
                                     {n}
+                                </Text>
+                            </Pressable>
+                        ))}
+                    </View>
+
+                    {/* Difficulty */}
+                    <SectionHeader label="Difficulty (optional)" />
+                    <View style={styles.chipRow}>
+                        {DIFFICULTIES.map((d) => (
+                            <Pressable
+                                key={d.label}
+                                style={[styles.chip, selectedDifficulty === d.key && styles.chipActive]}
+                                onPress={() => setSelectedDifficulty(d.key)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.chipText,
+                                        selectedDifficulty === d.key && styles.chipTextActive,
+                                    ]}
+                                >
+                                    {d.label}
                                 </Text>
                             </Pressable>
                         ))}
