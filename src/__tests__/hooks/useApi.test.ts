@@ -3,7 +3,7 @@
  */
 
 import { renderHook, waitFor } from "@testing-library/react-native";
-import { useFamilies, useSubnational1, useSubnational2 } from "../../hooks/useApi";
+import { useFamilies, useSubnational1, useSubnational2, clearApiCache } from "../../hooks/useApi";
 
 import {
     fetchFamilies,
@@ -28,6 +28,7 @@ const mockGetSub2 = getSubnational2Regions as jest.MockedFunction<typeof getSubn
 describe("useApi hooks", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        clearApiCache();
     });
 
     describe("useFamilies", () => {

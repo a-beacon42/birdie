@@ -25,8 +25,8 @@ const styles = StyleSheet.create({
     },
     text: {
         color: "#fff",
-        fontSize: typography.body,
-        fontWeight: "600",
-        textAlign: "center",
+        ...typography.body,
+        fontWeight: "600" as const,
+        textAlign: "center" as const,
     },
 });
