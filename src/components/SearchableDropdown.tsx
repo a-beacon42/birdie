@@ -39,7 +39,7 @@ export interface SearchableDropdownProps<T> {
     /** Placeholder text when nothing is selected */
     placeholder?: string;
     /** Currently selected value (compared against valueField) */
-    value: any;
+    value: T[keyof T] | null;
     /** Called when the user selects an item */
     onChange: (item: T) => void;
     /** Whether to show the search input (default true) */
@@ -177,7 +177,7 @@ function SearchableDropdownInner<T>(props: SearchableDropdownProps<T>) {
     /* ---- overlay position ---------------------------------------- */
 
     const { height: screenH } = useWindowDimensions();
-    let overlayStyle: any = {};
+    let overlayStyle: Record<string, unknown> = {};
     if (anchorLayout) {
         const GAP = 4;
         const PAD = 8;

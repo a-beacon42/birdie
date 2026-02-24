@@ -77,7 +77,13 @@ const FlashCard: React.FC<FlashCardProps> = ({
   const imageSource = imageUrl && !imageError ? imageUrl : PLACEHOLDER;
 
   return (
-    <Pressable onPress={flipCard} style={[styles.container, { width: cardWidth, height: cardHeight }]}>
+    <Pressable
+      onPress={flipCard}
+      style={[styles.container, { width: cardWidth, height: cardHeight }]}
+      accessibilityRole="button"
+      accessibilityLabel={flipped ? `${commonName}, ${latinName}` : "Bird identification card. Tap to reveal the answer."}
+      accessibilityHint={flipped ? undefined : "Double tap to flip the card and see the bird name"}
+    >
       {/* ---- Front: image only ---- */}
       <Animated.View
         pointerEvents={flipped ? "none" : "auto"}
@@ -135,12 +141,22 @@ const FlashCard: React.FC<FlashCardProps> = ({
           <Text style={styles.latinName}>{latinName}</Text>
           <View style={styles.buttonRow}>
             {onAskAI && (
-              <Pressable onPress={handleAskAI} style={styles.chatButton}>
+              <Pressable
+                onPress={handleAskAI}
+                style={styles.chatButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Ask AI about ${commonName}`}
+              >
                 <Text style={styles.chatButtonText}>Ask 🦉 AI</Text>
               </Pressable>
             )}
             {onInfoPress && (
-              <Pressable onPress={handleInfo} style={styles.infoButton}>
+              <Pressable
+                onPress={handleInfo}
+                style={styles.infoButton}
+                accessibilityRole="button"
+                accessibilityLabel={`View Wikipedia article for ${commonName}`}
+              >
                 <Text style={styles.infoButtonText}>ⓘ</Text>
               </Pressable>
             )}

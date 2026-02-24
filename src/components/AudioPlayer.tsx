@@ -23,12 +23,13 @@ interface AudioPlayerProps {
 
 const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, attribution }) => {
     // --- Native: expo-av Sound ref ---
-    const soundRef = useRef<any>(null);
+    const soundRef = useRef<InstanceType<typeof Audio.Sound> | null>(null);
     // --- Web: HTML5 Audio ref ---
     const htmlAudioRef = useRef<HTMLAudioElement | null>(null);
 
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         return () => {
@@ -48,6 +49,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, attribution }) => {
 
     // Reset when URL changes
     useEffect(() => {
+        setError(null);
         if (Platform.OS === "web") {
             if (htmlAudioRef.current) {
                 htmlAudioRef.current.pause();
@@ -89,6 +91,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, attribution }) => {
                 }
             } catch (err) {
                 console.error("Audio playback error:", err);
+                setError("Audio unavailable");
                 setIsLoading(false);
             }
         } else {
@@ -112,7 +115,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, attribution }) => {
                     setIsPlaying(true);
                     setIsLoading(false);
 
-                    sound.setOnPlaybackStatusUpdate((status: any) => {
+                    sound.setOnPlaybackStatusUpdate((status: { isLoaded: boolean; didJustFinish?: boolean }) => {
                         if (status.isLoaded && status.didJustFinish) {
                             setIsPlaying(false);
                         }
@@ -120,6 +123,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, attribution }) => {
                 }
             } catch (err) {
                 console.error("Audio playback error:", err);
+                setError("Audio unavailable");
                 setIsLoading(false);
             }
         }
@@ -129,18 +133,32 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, attribution }) => {
 
     return (
         <View style={styles.container}>
-            <Pressable
-                style={styles.playButton}
-                onPress={togglePlayback}
-                disabled={isLoading}
-            >
-                <Text style={styles.playIcon}>
-                    {isLoading ? "⏳" : isPlaying ? "⏸" : "▶"}
-                </Text>
-                <Text style={styles.playLabel}>
-                    {isLoading ? "Loading..." : isPlaying ? "Pause" : "Play Song"}
-                </Text>
-            </Pressable>
+            {error ? (
+                <View style={styles.errorRow} accessibilityRole="alert">
+                    <Text style={styles.errorIcon}>⚠</Text>
+                    <Text style={styles.errorText}>{error}</Text>
+                    <Pressable
+                        onPress={() => { setError(null); }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Retry audio playback"
+                    >
+                        <Text style={styles.retryLabel}>Retry</Text>
+                    </Pressable>
+                </View>
+            ) : (
+                <Pressable
+                    style={styles.playButton}
+                    onPress={togglePlayback}
+                    disabled={isLoading}
+                >
+                    <Text style={styles.playIcon}>
+                        {isLoading ? "⏳" : isPlaying ? "⏸" : "▶"}
+                    </Text>
+                    <Text style={styles.playLabel}>
+                        {isLoading ? "Loading..." : isPlaying ? "Pause" : "Play Song"}
+                    </Text>
+                </Pressable>
+            )}
             {attribution ? (
                 <Text style={styles.attribution} numberOfLines={1}>
                     {attribution}
@@ -174,6 +192,29 @@ const styles = StyleSheet.create({
     playLabel: {
         ...typography.label,
         color: colors.accentDark,
+    },
+    errorRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+        backgroundColor: colors.incorrect + "18",
+        borderWidth: 1,
+        borderColor: colors.incorrect + "40",
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.lg,
+        borderRadius: radii.full,
+    },
+    errorIcon: {
+        fontSize: 14,
+    },
+    errorText: {
+        ...typography.label,
+        color: colors.incorrect,
+    },
+    retryLabel: {
+        ...typography.label,
+        color: colors.primary,
+        textDecorationLine: "underline" as const,
     },
     attribution: {
         ...typography.caption,

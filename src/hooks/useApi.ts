@@ -13,7 +13,7 @@ import {
   getSubnational2Regions,
   getSpeciesList,
 } from "../api/birdieApi";
-import type { BirdSummary, Bird, BirdFamily } from "../types/bird";
+import type { BirdSummary, Bird, BirdFamily, Region } from "../types/bird";
 
 // --- Generic async hook ---
 
@@ -47,8 +47,8 @@ function useAsync<T>(
     try {
       const result = await asyncFn();
       if (mountedRef.current) setData(result);
-    } catch (err: any) {
-      if (mountedRef.current) setError(err?.message ?? "Something went wrong");
+    } catch (err: unknown) {
+      if (mountedRef.current) setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       if (mountedRef.current) setLoading(false);
     }
@@ -97,11 +97,6 @@ export function useBirdDetail(speciesCode: string | null): AsyncState<Bird> {
 }
 
 // --- Region hooks ---
-
-export interface Region {
-  code: string;
-  name: string;
-}
 
 export function useSubnational1(countryCode: string | null): AsyncState<Region[]> {
   return useAsync(

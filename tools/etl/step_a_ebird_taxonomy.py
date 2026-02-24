@@ -63,7 +63,12 @@ def normalize_taxonomy(raw_species: list[dict]) -> list[dict]:
 
 
 def run() -> list[dict]:
-    """Execute Step A: fetch taxonomy, normalize, upsert to Cosmos DB."""
+    """Execute Step A: fetch taxonomy, normalize, upsert to Cosmos DB.
+
+    Uses a merge strategy: if a document already exists, only taxonomy
+    fields are updated — enrichment data added by later steps (images,
+    audio, wikipedia_url, lookalikes, etc.) is preserved.
+    """
     raw = fetch_taxonomy()
     species = normalize_taxonomy(raw)
 
@@ -72,14 +77,42 @@ def run() -> list[dict]:
         json.dump(species, f, indent=2)
     print(f"  Wrote {len(species)} species to {OUTPUT_FILE}")
 
-    # Upsert to Cosmos DB
+    # Fields set by this step only — everything else is preserved.
+    TAXONOMY_KEYS = {
+        "id",
+        "species_code",
+        "sci_name",
+        "com_name",
+        "family_code",
+        "family_com_name",
+        "order",
+        "sort_order",
+    }
+
+    # Merge-upsert to Cosmos DB
     container = get_container()
     print(f"  Upserting {len(species)} species to Cosmos DB...")
     success = 0
     errors = 0
     for bird in tqdm(species, desc="Cosmos upsert (Step A)"):
         try:
-            container.upsert_item(bird)
+            # Attempt to read the existing document first
+            existing = None
+            try:
+                existing = container.read_item(
+                    item=bird["id"],
+                    partition_key=bird["family_code"],
+                )
+            except Exception:
+                pass  # Document doesn't exist yet — will create
+
+            if existing:
+                # Merge: update only taxonomy fields, keep enrichment
+                for key in TAXONOMY_KEYS:
+                    existing[key] = bird[key]
+                container.upsert_item(existing)
+            else:
+                container.upsert_item(bird)
             success += 1
         except Exception as e:
             errors += 1

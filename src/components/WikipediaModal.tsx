@@ -26,6 +26,20 @@ const WebView = Platform.OS !== "web"
     ? require("react-native-webview").WebView
     : null;
 
+/** Only allow URLs from Wikipedia domains. */
+const isAllowedWikipediaUrl = (url: string): boolean => {
+    try {
+        const parsed = new URL(url);
+        return (
+            parsed.protocol === "https:" &&
+            (parsed.hostname.endsWith(".wikipedia.org") ||
+                parsed.hostname === "wikipedia.org")
+        );
+    } catch {
+        return false;
+    }
+};
+
 interface WikipediaModalProps {
     visible: boolean;
     onClose: () => void;
@@ -43,23 +57,25 @@ const WikipediaModal: React.FC<WikipediaModalProps> = ({
 
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-            <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+            <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]} accessibilityViewIsModal={true}>
                 {/* Header — explicit padding ensures it clears the notch */}
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle} numberOfLines={1}>
+                    <Text style={styles.headerTitle} numberOfLines={1} accessibilityRole="header">
                         {title || "Wikipedia"}
                     </Text>
                     <Pressable
                         onPress={onClose}
                         style={styles.closeButton}
                         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Close Wikipedia viewer"
                     >
                         <Text style={styles.closeText}>Done</Text>
                     </Pressable>
                 </View>
 
                 {/* Content — iframe on web, WebView on native */}
-                {url ? (
+                {url && isAllowedWikipediaUrl(url) ? (
                     Platform.OS === "web" ? (
                         <iframe
                             src={url}

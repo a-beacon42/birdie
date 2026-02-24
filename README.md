@@ -1,82 +1,110 @@
 # Birdie
 
-A cross-platform mobile application built with **Expo** and **React Native** using **TypeScript**. Birdie helps you learn bird identification by building custom flashcard decks.
+A cross-platform mobile application built with **Expo** and **React Native** using **TypeScript**. Birdie helps you learn bird identification through flashcard decks powered by a **FastAPI** backend and **Azure Cosmos DB**.
+
+## Architecture
+
+| Layer              | Stack                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| **Frontend**       | React Native 0.81 · Expo SDK 54 · expo-router · Zustand · TypeScript |
+| **Backend**        | FastAPI · Python 3.13 · Azure Cosmos DB · Azure OpenAI               |
+| **Infrastructure** | Docker multi-stage · Azure Container Apps · GitHub Actions CI/CD     |
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
-- npm or Yarn
-- Expo CLI (`npm install -g expo-cli`)
-- XCode & iOS simulator
+- Node.js ≥ 18 and npm
+- Python ≥ 3.12
+- Docker (for containerised builds)
+- Expo CLI (`npx expo`)
+- Xcode (iOS) or Android Studio (Android)
 
 ## Getting Started
 
 1. Clone the repo:
+
    ```bash
-   git clone https://github.com/a-beacon42/birdie.git
+   git clone https://github.com/a-beacon42/birdie.git && cd birdie
    ```
-2. Change into the project directory:
-   ```bash
-   cd birdie
-   ```
-3. Install dependencies:
+
+2. Install frontend dependencies:
+
    ```bash
    npm install
-   # or
-   yarn install
    ```
 
-## Running the App
+3. Set up the backend:
 
-- Start the development server:
-  ```bash
-  npm run start
-  # or
-  yarn start
-  ```
+   ```bash
+   cd backend
+   python -m venv .venv && source .venv/bin/activate
+   pip install -r requirements.txt
+   cp ../.env.example .env   # then fill in your secrets
+   ```
 
-- Open on Android emulator/device:
-  ```bash
-  npm run android
-  ```
+4. Start the backend:
 
-- Open on iOS simulator/device:
-  ```bash
-  npm run ios
-  ```
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
-- Open in web browser:
-  ```bash
-  npm run web
-  ```
+5. Start the frontend:
+   ```bash
+   # From the repo root
+   npx expo start
+   ```
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and set:
+
+| Variable                  | Description                                            |
+| ------------------------- | ------------------------------------------------------ |
+| `COSMOS_ENDPOINT`         | Azure Cosmos DB endpoint                               |
+| `COSMOS_KEY`              | Cosmos DB key (omit for managed identity)              |
+| `COSMOS_DATABASE`         | Database name                                          |
+| `EBIRD_API_KEY`           | eBird API token                                        |
+| `API_KEY`                 | Shared secret (signs JWTs, min 32 chars in production) |
+| `AZURE_OPENAI_ENDPOINT`   | Azure OpenAI endpoint                                  |
+| `AZURE_OPENAI_API_KEY`    | Azure OpenAI key                                       |
+| `AZURE_OPENAI_DEPLOYMENT` | Deployment name                                        |
+
+## Running Tests
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest -v
+```
 
 ## Project Structure
 
 ```
-/ birdie
-├─ app.json            # Expo configuration
-├─ index.ts            # App entry point
-├─ package.json        # Dependencies & scripts
-├─ tsconfig.json       # TypeScript config
-├─ eslint.config.js    # ESLint rules
-├─ assets/             # Images and icons
-├─ docs/               # Documentation & diagrams
-└─ src/                # Application source code
-   ├─ App.tsx          # Root component
-   ├─ @types           # Type definitions
-   ├─ api              # External API connectors
-   ├─ components/      # Reusable UI components
-   ├─ data/            # Mock or static data
-   ├─ hooks/           # Custom React hooks
-   ├─ services/        # Business logic and data services (e.g., API calls, storage, authentication)
-   └─ screens/         # Screen components
+birdie/
+├─ app/                 # Expo Router screens (index, game)
+├─ src/
+│  ├─ api/              # Axios API client
+│  ├─ components/       # Reusable UI (FlashCard, AudioPlayer, modals)
+│  ├─ hooks/            # Custom React hooks (useApi)
+│  ├─ stores/           # Zustand stores (game, preferences)
+│  ├─ types/            # TypeScript type definitions
+│  └─ theme.ts          # Design tokens (colors, spacing, typography)
+├─ backend/
+│  ├─ app/
+│  │  ├─ main.py        # FastAPI entry point with health checks
+│  │  ├─ config.py      # Pydantic settings
+│  │  ├─ models/        # Pydantic models (Bird, ChatMessage, etc.)
+│  │  ├─ routers/       # API routes (birds, chat, regions, auth)
+│  │  └─ services/      # Business logic (Cosmos, eBird proxy, difficulty)
+│  └─ tests/            # pytest test suite
+├─ tools/etl/           # Data pipeline scripts (eBird → Cosmos DB)
+├─ docs/                # Architecture diagrams & privacy policy
+├─ Dockerfile           # Multi-stage build (web + API)
+└─ .github/workflows/   # CI/CD pipelines
 ```
 
 ## Contributing
 
-Contributions are welcome! Please:
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/your-feature`).
-3. Commit your changes (`git commit -m "Add feature"`).
-4. Push to your branch (`git push origin feature/your-feature`).
-5. Open a Pull Request.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Run tests and linting before committing
+4. Open a Pull Request
