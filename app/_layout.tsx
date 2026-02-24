@@ -15,6 +15,10 @@ import { colors } from "../src/theme";
 import ErrorBoundary from "../src/components/ErrorBoundary";
 import OfflineBanner from "../src/components/OfflineBanner";
 import { useNetworkStatus } from "../src/hooks/useNetworkStatus";
+import { initSentry } from "../src/utils/sentry";
+
+// Initialise Sentry as early as possible
+initSentry();
 
 export default function RootLayout() {
     const { isConnected } = useNetworkStatus();
