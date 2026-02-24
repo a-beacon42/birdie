@@ -31,11 +31,11 @@ const ScoreBar: React.FC<ScoreBarProps> = ({
     const filterText = [difficultyLabel, familyLabel, regionLabel].filter(Boolean).join(" — ");
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} accessibilityRole="summary" accessibilityLabel={`Score: ${correct} correct, ${incorrect} incorrect, ${skipped} skipped out of ${total}`}>
             <View style={styles.statsRow}>
-                <Text style={[styles.stat, { color: colors.incorrect }]}>✗ {incorrect}</Text>
-                <Text style={[styles.stat, { color: colors.textMuted }]}>⊘ {skipped}</Text>
-                <Text style={[styles.stat, { color: colors.correct }]}>✓ {correct}</Text>
+                <Text style={[styles.stat, { color: colors.incorrect }]} accessibilityLabel={`${incorrect} incorrect`}>✗ {incorrect}</Text>
+                <Text style={[styles.stat, { color: colors.textMuted }]} accessibilityLabel={`${skipped} skipped`}>— {skipped}</Text>
+                <Text style={[styles.stat, { color: colors.correct }]} accessibilityLabel={`${correct} correct`}>✓ {correct}</Text>
             </View>
             <View style={styles.track}>
                 <View style={[styles.fill, { flex: progress }]} />

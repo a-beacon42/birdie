@@ -25,13 +25,21 @@ class Settings(BaseSettings):
 
     # Rate limiting
     chat_rate_limit: str = "20/hour"  # slowapi rate string
+    default_rate_limit: str = "120/minute"  # general API endpoints
 
     # CORS
     allowed_origins: str = (
         "http://localhost:8081,http://localhost:19006,http://localhost:8000"
     )
 
+    # Environment
+    environment: str = "development"  # "development" | "production"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.lower() == "production"
 
     @property
     def cors_origins(self) -> list[str]:

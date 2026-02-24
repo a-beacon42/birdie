@@ -56,3 +56,22 @@ jobs:
             --name $CONTAINER_APP \
             --resource-group $RESOURCE_GROUP \
             --image "${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+
+      - name: Verify deployment health
+        run: |
+          FQDN=$(az containerapp show \
+            --name $CONTAINER_APP \
+            --resource-group $RESOURCE_GROUP \
+            --query "properties.configuration.ingress.fqdn" -o tsv)
+          echo "Checking health at https://${FQDN}/health ..."
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${FQDN}/health" || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed (attempt $i)"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $STATUS — retrying in 10s..."
+            sleep 10
+          done
+          echo "Health check failed after 5 attempts"
+          exit 1

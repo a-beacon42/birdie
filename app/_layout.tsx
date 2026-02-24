@@ -12,21 +12,33 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { colors } from "../src/theme";
+import ErrorBoundary from "../src/components/ErrorBoundary";
+import OfflineBanner from "../src/components/OfflineBanner";
+import { useNetworkStatus } from "../src/hooks/useNetworkStatus";
+import { initSentry } from "../src/utils/sentry";
+
+// Initialise Sentry as early as possible
+initSentry();
 
 export default function RootLayout() {
+    const { isConnected } = useNetworkStatus();
+
     const content = (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaProvider>
-                <StatusBar style="dark" />
-                <Stack
-                    screenOptions={{
-                        headerShown: false,
-                        contentStyle: { backgroundColor: colors.background },
-                        animation: "slide_from_right",
-                    }}
-                />
-            </SafeAreaProvider>
-        </GestureHandlerRootView>
+        <ErrorBoundary>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <SafeAreaProvider>
+                    <StatusBar style="dark" />
+                    {!isConnected && <OfflineBanner />}
+                    <Stack
+                        screenOptions={{
+                            headerShown: false,
+                            contentStyle: { backgroundColor: colors.background },
+                            animation: "slide_from_right",
+                        }}
+                    />
+                </SafeAreaProvider>
+            </GestureHandlerRootView>
+        </ErrorBoundary>
     );
 
     // On web, centre the app in a mobile-width column with a subtle border

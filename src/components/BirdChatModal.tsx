@@ -9,11 +9,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
+    FlatList,
     KeyboardAvoidingView,
+    ListRenderItemInfo,
     Modal,
     Platform,
     Pressable,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -30,6 +31,7 @@ import { colors, spacing, radii, typography } from "../theme";
 /* ------------------------------------------------------------------ */
 const MAX_PER_HOUR = 20;
 const WINDOW_MS = 60 * 60 * 1000;
+const MAX_MESSAGE_LENGTH = 4000;
 let stamps: number[] = [];
 const prune = () => {
     stamps = stamps.filter((t) => Date.now() - t < WINDOW_MS);
@@ -57,7 +59,16 @@ const makePrompt = (name: string) =>
 /* ------------------------------------------------------------------ */
 const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
     const insets = useSafeAreaInsets();
-    const scrollRef = useRef<ScrollView>(null);
+    const listRef = useRef<FlatList<ChatMessage>>(null);
+    const closeBtnRef = useRef<View>(null);
+
+    /* Move accessibility focus to the close button when the modal opens */
+    useEffect(() => {
+        if (visible) {
+            const id = setTimeout(() => closeBtnRef.current?.focus(), 150);
+            return () => clearTimeout(id);
+        }
+    }, [visible]);
 
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
@@ -68,10 +79,25 @@ const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
     const msgCount = messages.length;
     useEffect(() => {
         if (msgCount === 0) return;
-        // Short delay so the ScrollView finishes layout before we scroll
-        const id = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
+        const id = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 120);
         return () => clearTimeout(id);
     }, [msgCount]);
+
+    /* ---- FlatList renderItem ---- */
+    const renderMessage = useCallback(({ item: m }: ListRenderItemInfo<ChatMessage>) => (
+        <View style={m.role === "user" ? styles.userBubble : styles.aiBubble}>
+            {m.role === "assistant" && (
+                <Text style={styles.aiLabel}>Birdie AI</Text>
+            )}
+            {m.role === "user" ? (
+                <Text style={styles.userText}>{m.content}</Text>
+            ) : (
+                <MarkdownText>{m.content}</MarkdownText>
+            )}
+        </View>
+    ), []);
+
+    const keyExtractor = useCallback((_: ChatMessage, index: number) => String(index), []);
 
     /* ---- auto-send first question on open ---- */
     useEffect(() => {
@@ -97,6 +123,10 @@ const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
     const send = useCallback(async () => {
         const text = input.trim();
         if (!text || loading) return;
+        if (text.length > MAX_MESSAGE_LENGTH) {
+            showAlert("Too long", `Messages are limited to ${MAX_MESSAGE_LENGTH} characters.`);
+            return;
+        }
         if (limited()) {
             showAlert("Slow down!", `Limit of ${MAX_PER_HOUR} messages per hour reached.`);
             return;
@@ -113,8 +143,9 @@ const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
         try {
             const reply = await sendChatMessage(commonName, convo);
             setMessages((prev) => [...prev, reply]);
-        } catch (e: any) {
-            setError(e?.message ?? "Failed to send message");
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Failed to send message";
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -129,7 +160,7 @@ const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
     /* ---- JSX ---- */
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-            <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+            <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]} accessibilityViewIsModal={true}>
                 <KeyboardAvoidingView
                     style={styles.flex}
                     behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -137,8 +168,8 @@ const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
                 >
                     {/* Header */}
                     <View style={styles.header}>
-                        <Text style={styles.title} numberOfLines={1}>{commonName}</Text>
-                        <Pressable onPress={onClose} style={styles.doneBtn} hitSlop={12}>
+                        <Text style={styles.title} numberOfLines={1} accessibilityRole="header">{commonName}</Text>
+                        <Pressable ref={closeBtnRef} onPress={onClose} style={styles.doneBtn} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close chat">
                             <Text style={styles.doneText}>Done</Text>
                         </Pressable>
                     </View>
@@ -149,42 +180,30 @@ const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
                     </View>
 
                     {/* Messages */}
-                    <ScrollView
-                        ref={scrollRef}
+                    <FlatList<ChatMessage>
+                        ref={listRef}
+                        data={visible_msgs}
+                        renderItem={renderMessage}
+                        keyExtractor={keyExtractor}
                         style={styles.flex}
                         contentContainerStyle={styles.scrollContent}
                         keyboardShouldPersistTaps="handled"
-                    >
-                        {visible_msgs.map((m, i) => (
-                            <View
-                                key={i}
-                                style={m.role === "user" ? styles.userBubble : styles.aiBubble}
-                            >
-                                {m.role === "assistant" && (
-                                    <Text style={styles.aiLabel}>Birdie AI</Text>
+                        ListFooterComponent={
+                            <>
+                                {loading && (
+                                    <View style={styles.loadingRow}>
+                                        <ActivityIndicator size="small" color={colors.primary} />
+                                        <Text style={styles.loadingText}>Thinking…</Text>
+                                    </View>
                                 )}
-                                {m.role === "user" ? (
-                                    <Text style={styles.userText}>{m.content}</Text>
-                                ) : (
-                                    <MarkdownText>{m.content}</MarkdownText>
+                                {!!error && !loading && (
+                                    <View style={styles.loadingRow}>
+                                        <Text style={styles.errorText}>{error}</Text>
+                                    </View>
                                 )}
-                            </View>
-                        ))}
-
-                        {/* Loading indicator inside scroll area so it sits after last message */}
-                        {loading && (
-                            <View style={styles.loadingRow}>
-                                <ActivityIndicator size="small" color={colors.primary} />
-                                <Text style={styles.loadingText}>Thinking…</Text>
-                            </View>
-                        )}
-
-                        {!!error && !loading && (
-                            <View style={styles.loadingRow}>
-                                <Text style={styles.errorText}>{error}</Text>
-                            </View>
-                        )}
-                    </ScrollView>
+                            </>
+                        }
+                    />
 
                     {/* Input */}
                     <View style={styles.inputBar}>
@@ -208,6 +227,8 @@ const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
                                 (!input.trim() || loading) && styles.sendDisabled,
                                 pressed && styles.sendPressed,
                             ]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Send message"
                         >
                             <Text style={styles.sendLabel}>Send</Text>
                         </Pressable>

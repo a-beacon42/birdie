@@ -2,7 +2,7 @@
  * ResultsModal — End-of-game summary showing score breakdown.
  */
 
-import React from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
     Modal,
     View,
@@ -28,25 +28,37 @@ const ResultsModal: React.FC<ResultsModalProps> = ({
     onResetGame,
 }) => {
     const { answers, birds } = useGameStore();
-    const correct = answers.filter((a) => a.result === "correct").length;
-    const incorrect = answers.filter((a) => a.result === "incorrect").length;
-    const skipped = answers.filter((a) => a.result === "skipped").length;
-    const total = birds.length;
-    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const primaryBtnRef = useRef<View>(null);
 
-    const avgTime =
-        answers.length > 0
-            ? Math.round(
-                answers.reduce((sum, a) => sum + a.timeMs, 0) / answers.length / 1000
-            )
-            : 0;
+    /* Move accessibility focus to the primary action when the modal opens */
+    useEffect(() => {
+        if (visible) {
+            const id = setTimeout(() => primaryBtnRef.current?.focus(), 150);
+            return () => clearTimeout(id);
+        }
+    }, [visible]);
+
+    const { correct, incorrect, skipped, total, pct, avgTime } = useMemo(() => {
+        let c = 0, inc = 0, sk = 0;
+        let totalTime = 0;
+        for (const a of answers) {
+            if (a.result === "correct") c++;
+            else if (a.result === "incorrect") inc++;
+            else sk++;
+            totalTime += a.timeMs;
+        }
+        const t = birds.length;
+        const p = t > 0 ? Math.round((c / t) * 100) : 0;
+        const avg = answers.length > 0 ? Math.round(totalTime / answers.length / 1000) : 0;
+        return { correct: c, incorrect: inc, skipped: sk, total: t, pct: p, avgTime: avg };
+    }, [answers, birds.length]);
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
-            <View style={styles.overlay}>
+            <View style={styles.overlay} accessibilityViewIsModal={true}>
                 <SafeAreaView style={styles.safeArea}>
                     <View style={styles.card}>
-                        <Text style={styles.title}>🎉 Game Complete!</Text>
+                        <Text style={styles.title} accessibilityRole="header">🎉 Game Complete!</Text>
                         <Text style={styles.subtitle}>
                             You scored {correct} out of {total}
                         </Text>
@@ -80,14 +92,19 @@ const ResultsModal: React.FC<ResultsModalProps> = ({
 
                         <View style={styles.actionRow}>
                             <Pressable
+                                ref={primaryBtnRef}
                                 style={[styles.button, styles.buttonPrimary]}
                                 onPress={onEndGame}
+                                accessibilityRole="button"
+                                accessibilityLabel="Start a new game"
                             >
                                 <Text style={styles.buttonPrimaryText}>New Game</Text>
                             </Pressable>
                             <Pressable
                                 style={[styles.button, styles.buttonSecondary]}
                                 onPress={onResetGame}
+                                accessibilityRole="button"
+                                accessibilityLabel="Reset and replay the same deck"
                             >
                                 <Text style={styles.buttonSecondaryText}>Reset Game</Text>
                             </Pressable>

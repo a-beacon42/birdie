@@ -28,6 +28,17 @@ interface MarkdownTextProps {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+const ALLOWED_URL_SCHEMES = /^https?:\/\//i;
+
+const safeOpenURL = (url: string) => {
+    if (ALLOWED_URL_SCHEMES.test(url)) {
+        Linking.openURL(url);
+    }
+};
+
+/* ------------------------------------------------------------------ */
 /*  Inline parser                                                      */
 /* ------------------------------------------------------------------ */
 type Inline =
@@ -93,7 +104,8 @@ const renderInline = (tokens: Inline[], base?: TextStyle) =>
                     <Text
                         key={i}
                         style={[base, s.link]}
-                        onPress={() => Linking.openURL(tok.url)}
+                        accessibilityRole="link"
+                        onPress={() => safeOpenURL(tok.url)}
                     >
                         {tok.label}
                     </Text>

@@ -52,6 +52,12 @@ export interface BirdFamily {
     family_com_name: string;
 }
 
+/** An eBird geographic region (country, state, or county). */
+export interface Region {
+    code: string;
+    name: string;
+}
+
 /** Helper: get the primary image URL from a Bird */
 export function getPrimaryImageUrl(bird: Bird | BirdSummary): string {
     if ("image_url" in bird) return bird.image_url;

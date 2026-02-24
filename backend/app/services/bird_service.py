@@ -1,14 +1,21 @@
 """Service layer for bird data operations against Cosmos DB."""
 
+import threading
 import time
 
 from app.models.bird import Bird, BirdSummary, DataVersion
 from app.services.cosmos import get_birds_container
 
 # In-memory cache for families (static data — rarely changes).
+_cache_lock = threading.Lock()
 _families_cache: list[dict] | None = None
 _families_cache_ts: float = 0.0
 _FAMILIES_TTL: float = 3600  # refresh once per hour
+
+# In-memory cache for data version (very static).
+_version_cache: DataVersion | None = None
+_version_cache_ts: float = 0.0
+_VERSION_TTL: float = 3600  # refresh once per hour
 
 
 def query_birds(
@@ -47,13 +54,14 @@ def query_birds(
         ]
     )
 
-    items = list(
-        container.query_items(
-            query=query,
-            parameters=parameters,
-            enable_cross_partition_query=True,
-        )
-    )
+    # When filtering by family, use partition key for efficient single-partition query
+    query_kwargs: dict = {"query": query, "parameters": parameters}
+    if family_code:
+        query_kwargs["partition_key"] = family_code
+    else:
+        query_kwargs["enable_cross_partition_query"] = True
+
+    items = list(container.query_items(**query_kwargs))
 
     results: list[BirdSummary] = []
     for item in items:
@@ -107,8 +115,9 @@ def get_unique_families() -> list[dict]:
     global _families_cache, _families_cache_ts
 
     now = time.monotonic()
-    if _families_cache is not None and (now - _families_cache_ts) < _FAMILIES_TTL:
-        return _families_cache
+    with _cache_lock:
+        if _families_cache is not None and (now - _families_cache_ts) < _FAMILIES_TTL:
+            return _families_cache
 
     container = get_birds_container()
 
@@ -123,13 +132,21 @@ def get_unique_families() -> list[dict]:
         )
     )
 
-    _families_cache = items
-    _families_cache_ts = now
+    with _cache_lock:
+        _families_cache = items
+        _families_cache_ts = now
     return items
 
 
 def get_data_version() -> DataVersion:
-    """Get metadata about the current dataset."""
+    """Get metadata about the current dataset (cached)."""
+    global _version_cache, _version_cache_ts
+
+    now = time.monotonic()
+    with _cache_lock:
+        if _version_cache is not None and (now - _version_cache_ts) < _VERSION_TTL:
+            return _version_cache
+
     container = get_birds_container()
 
     count_query = "SELECT VALUE COUNT(1) FROM c"
@@ -156,8 +173,14 @@ def get_data_version() -> DataVersion:
 
     pct = (with_images / total * 100) if total > 0 else 0.0
 
-    return DataVersion(
+    result = DataVersion(
         version=version,
         total_species=total,
         image_coverage_pct=round(pct, 1),
     )
+
+    with _cache_lock:
+        _version_cache = result
+        _version_cache_ts = now
+
+    return result

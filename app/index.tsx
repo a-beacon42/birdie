@@ -20,14 +20,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, radii, typography, shadows } from "../src/theme";
 import { useFamilies, useSubnational1, useSubnational2 } from "../src/hooks/useApi";
 import { useGameStore } from "../src/stores/gameStore";
+import { usePreferencesStore } from "../src/stores/preferencesStore";
 import { createDeck, getSpeciesList } from "../src/api/birdieApi";
 import type { Difficulty } from "../src/api/birdieApi";
-import type { BirdFamily } from "../src/types/bird";
+import type { BirdFamily, Region } from "../src/types/bird";
 import SearchableDropdown from "../src/components/SearchableDropdown";
 import allCountries from "../src/data/AllCountries.json";
 
 type Country = { name: string; code: string };
-type Region = { name: string; code: string };
 
 const CARD_COUNTS = [10, 25, 50] as const;
 const DIFFICULTIES: { key: Difficulty | null; label: string }[] = [
@@ -41,13 +41,20 @@ export default function HomeScreen() {
     const router = useRouter();
     const startGame = useGameStore((s) => s.startGame);
 
-    // Filters
-    const [cardCount, setCardCount] = useState<number>(25);
-    const [selectedFamily, setSelectedFamily] = useState<string>("");
-    const [selectedCountry, setSelectedCountry] = useState<string>("");
-    const [selectedState, setSelectedState] = useState<string>("");
-    const [selectedCounty, setSelectedCounty] = useState<string>("");
-    const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty | null>(null);
+    // Persisted filter preferences
+    const cardCount = usePreferencesStore((s) => s.cardCount);
+    const setCardCount = usePreferencesStore((s) => s.setCardCount);
+    const selectedFamily = usePreferencesStore((s) => s.selectedFamily);
+    const setSelectedFamily = usePreferencesStore((s) => s.setSelectedFamily);
+    const selectedCountry = usePreferencesStore((s) => s.selectedCountry);
+    const setSelectedCountry = usePreferencesStore((s) => s.setSelectedCountry);
+    const selectedState = usePreferencesStore((s) => s.selectedState);
+    const setSelectedState = usePreferencesStore((s) => s.setSelectedState);
+    const selectedCounty = usePreferencesStore((s) => s.selectedCounty);
+    const setSelectedCounty = usePreferencesStore((s) => s.setSelectedCounty);
+    const selectedDifficulty = usePreferencesStore((s) => s.selectedDifficulty);
+    const setSelectedDifficulty = usePreferencesStore((s) => s.setSelectedDifficulty);
+    const clearAll = usePreferencesStore((s) => s.clearAll);
     const [creating, setCreating] = useState(false);
 
     // API data
@@ -57,14 +64,11 @@ export default function HomeScreen() {
 
     const handleCountryChange = useCallback((item: Country) => {
         setSelectedCountry(item.code);
-        setSelectedState("");
-        setSelectedCounty("");
-    }, []);
+    }, [setSelectedCountry]);
 
     const handleStateChange = useCallback((item: Region) => {
         setSelectedState(item.code);
-        setSelectedCounty("");
-    }, []);
+    }, [setSelectedState]);
 
     const handleCreateGame = useCallback(async () => {
         setCreating(true);
@@ -120,21 +124,16 @@ export default function HomeScreen() {
 
             startGame(deck, "flashcard", { familyLabel, regionLabel, difficultyLabel });
             router.push("/game");
-        } catch (err: any) {
-            showAlert("Error", err.message || "Failed to create game");
+        } catch (err: unknown) {
+            showAlert("Error", err instanceof Error ? err.message : "Failed to create game");
         } finally {
             setCreating(false);
         }
     }, [cardCount, selectedFamily, selectedDifficulty, selectedCountry, selectedState, selectedCounty, families, subnational1, subnational2, startGame, router]);
 
     const handleClearFilters = useCallback(() => {
-        setCardCount(25);
-        setSelectedFamily("");
-        setSelectedDifficulty(null);
-        setSelectedCountry("");
-        setSelectedState("");
-        setSelectedCounty("");
-    }, []);
+        clearAll();
+    }, [clearAll]);
 
     return (
         <SafeAreaView style={styles.safeArea} edges={["top"]}>

@@ -11,6 +11,7 @@ import {
   Text,
   StyleSheet,
   Pressable,
+  Image,
   useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -60,6 +61,17 @@ export default function GameScreen() {
   const currentBird = birds[currentIndex] ?? null;
   const remaining = deckSize - answeredCodes.size;
 
+  // Memoize score counts to avoid re-filtering on every render
+  const { correctCount, incorrectCount, skippedCount } = useMemo(() => {
+    let correct = 0, incorrect = 0, skipped = 0;
+    for (const a of answers) {
+      if (a.result === "correct") correct++;
+      else if (a.result === "incorrect") incorrect++;
+      else skipped++;
+    }
+    return { correctCount: correct, incorrectCount: incorrect, skippedCount: skipped };
+  }, [answers]);
+
   // Position of current bird within the unanswered subset
   const unansweredPosition = useMemo(() => {
     if (!currentBird || answeredCodes.has(currentBird.species_code)) return 0;
@@ -103,6 +115,14 @@ export default function GameScreen() {
     cardStartTime.current = Date.now();
   }, [currentIndex]);
 
+  // ---- Prefetch next unanswered card image ----
+  useEffect(() => {
+    const next = findUnanswered(currentIndex, 1);
+    if (next !== -1 && birds[next]?.image_url) {
+      Image.prefetch(birds[next].image_url).catch(() => { });
+    }
+  }, [currentIndex, birds, findUnanswered]);
+
   // ---- Answer handlers ----
   const handleCorrect = useCallback(() => {
     if (!currentBird) return;
@@ -144,6 +164,17 @@ export default function GameScreen() {
     }
   }, [currentBird]);
 
+  // ---- Non-gesture navigation (accessibility alternative to swipe) ----
+  const handlePrevCard = useCallback(() => {
+    const prev = findUnanswered(currentIndex, -1);
+    if (prev !== -1) goToIndex(prev);
+  }, [currentIndex, findUnanswered, goToIndex]);
+
+  const handleNextCard = useCallback(() => {
+    const next = findUnanswered(currentIndex, 1);
+    if (next !== -1) goToIndex(next);
+  }, [currentIndex, findUnanswered, goToIndex]);
+
   // ---- Swipe gesture (navigate between unanswered cards) ----
   const swipeGesture = Gesture.Pan()
     .activeOffsetX([-20, 20])
@@ -163,7 +194,12 @@ export default function GameScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No birds to display.</Text>
-          <Pressable style={styles.backButton} onPress={handleEndGame}>
+          <Pressable
+            style={styles.backButton}
+            onPress={handleEndGame}
+            accessibilityRole="button"
+            accessibilityLabel="Go back to home screen"
+          >
             <Text style={styles.backButtonText}>Back to Home</Text>
           </Pressable>
         </View>
@@ -178,9 +214,9 @@ export default function GameScreen() {
         <ScoreBar
           current={answers.length}
           total={deckSize}
-          correct={answers.filter((a) => a.result === "correct").length}
-          incorrect={answers.filter((a) => a.result === "incorrect").length}
-          skipped={answers.filter((a) => a.result === "skipped").length}
+          correct={correctCount}
+          incorrect={incorrectCount}
+          skipped={skippedCount}
           familyLabel={filters.familyLabel}
           regionLabel={filters.regionLabel}
           difficultyLabel={filters.difficultyLabel}
@@ -216,6 +252,8 @@ export default function GameScreen() {
                     pressed && styles.pressed,
                   ]}
                   onPress={handleIncorrect}
+                  accessibilityRole="button"
+                  accessibilityLabel="Incorrect — I didn't know this bird"
                 >
                   <Text style={styles.emoji}>❌</Text>
                 </Pressable>
@@ -226,6 +264,8 @@ export default function GameScreen() {
                     pressed && styles.pressed,
                   ]}
                   onPress={handleSkip}
+                  accessibilityRole="button"
+                  accessibilityLabel="Skip this bird"
                 >
                   <Text style={styles.skipButtonText}>skip</Text>
                 </Pressable>
@@ -237,13 +277,42 @@ export default function GameScreen() {
                     pressed && styles.pressed,
                   ]}
                   onPress={handleCorrect}
+                  accessibilityRole="button"
+                  accessibilityLabel="Correct — I knew this bird"
                 >
                   <Text style={styles.emoji}>✅</Text>
                 </Pressable>
               </View>
 
+              {/* Card navigation (non-gesture alternative) */}
+              {remaining > 1 && (
+                <View style={styles.navRow}>
+                  <Pressable
+                    onPress={handlePrevCard}
+                    style={({ pressed }) => [styles.navButton, pressed && styles.pressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Previous card"
+                  >
+                    <Text style={styles.navButtonText}>‹ Prev</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleNextCard}
+                    style={({ pressed }) => [styles.navButton, pressed && styles.pressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Next card"
+                  >
+                    <Text style={styles.navButtonText}>Next ›</Text>
+                  </Pressable>
+                </View>
+              )}
+
               <View style={styles.endGameRow}>
-                <Pressable style={styles.endButton} onPress={handleShowResults}>
+                <Pressable
+                  style={styles.endButton}
+                  onPress={handleShowResults}
+                  accessibilityRole="button"
+                  accessibilityLabel="End game and see results"
+                >
                   <Text style={styles.endButtonText}>End Game</Text>
                 </Pressable>
               </View>
@@ -360,6 +429,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: spacing.sm,
     paddingBottom: spacing.sm,
+  },
+  navRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.xl,
+  },
+  navButton: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  navButtonText: {
+    ...typography.label,
+    color: colors.primary,
+    fontSize: 15,
   },
   endButton: {
     borderWidth: 1.5,
