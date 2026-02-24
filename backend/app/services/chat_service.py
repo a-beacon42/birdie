@@ -5,13 +5,39 @@ Supports two authentication modes:
   2. Managed identity — leave AZURE_OPENAI_API_KEY empty; uses DefaultAzureCredential (production)
 """
 
+import logging
+
 import httpx
 
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 # Cached token credential (only created once, when using managed identity)
 _credential = None
 _OPENAI_SCOPE = "https://cognitiveservices.azure.com/.default"
+
+# Persistent HTTP client for Azure OpenAI calls
+_client: httpx.AsyncClient | None = None
+
+
+def get_http_client() -> httpx.AsyncClient:
+    """Get or create a persistent async HTTP client for Azure OpenAI."""
+    global _client
+    if _client is None or _client.is_closed:
+        _client = httpx.AsyncClient(
+            timeout=60.0,
+            limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
+        )
+    return _client
+
+
+async def close_http_client() -> None:
+    """Close the HTTP client (call during app shutdown)."""
+    global _client
+    if _client and not _client.is_closed:
+        await _client.aclose()
+        _client = None
 
 # System prompt enforced server-side — never accepted from the client.
 SYSTEM_PROMPT = (
@@ -64,10 +90,10 @@ async def send_chat(bird_name: str, messages: list[dict]) -> dict:
         *[{"role": m["role"], "content": m["content"]} for m in messages],
     ]
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(url, headers=headers, json={"messages": full_messages})
-        resp.raise_for_status()
-        data = resp.json()
+    client = get_http_client()
+    resp = await client.post(url, headers=headers, json={"messages": full_messages})
+    resp.raise_for_status()
+    data = resp.json()
 
     choice = data.get("choices", [{}])[0]
     message = choice.get("message", {})

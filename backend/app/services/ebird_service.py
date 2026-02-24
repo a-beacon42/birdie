@@ -1,16 +1,41 @@
 """Proxy service for eBird API calls — keeps the API key server-side."""
 
+import logging
 import time
 
 import httpx
 
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 EBIRD_BASE = "https://api.ebird.org/v2"
 
 # Simple in-memory cache for regional frequency (expensive to compute)
 _freq_cache: dict[str, tuple[float, dict[str, float]]] = {}
 _FREQ_TTL: float = 3600  # 1 hour
+
+# Persistent HTTP client — reused across requests for connection pooling
+_client: httpx.AsyncClient | None = None
+
+
+def get_http_client() -> httpx.AsyncClient:
+    """Get or create a persistent async HTTP client for eBird API calls."""
+    global _client
+    if _client is None or _client.is_closed:
+        _client = httpx.AsyncClient(
+            timeout=30.0,
+            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+        )
+    return _client
+
+
+async def close_http_client() -> None:
+    """Close the HTTP client (call during app shutdown)."""
+    global _client
+    if _client and not _client.is_closed:
+        await _client.aclose()
+        _client = None
 
 
 def _headers() -> dict[str, str]:
@@ -22,35 +47,35 @@ def _headers() -> dict[str, str]:
 
 async def get_subnational1_regions(country_code: str) -> list[dict]:
     """Get states/provinces for a country."""
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(
-            f"{EBIRD_BASE}/ref/region/list/subnational1/{country_code}",
-            headers=_headers(),
-        )
-        resp.raise_for_status()
-        return resp.json()
+    client = get_http_client()
+    resp = await client.get(
+        f"{EBIRD_BASE}/ref/region/list/subnational1/{country_code}",
+        headers=_headers(),
+    )
+    resp.raise_for_status()
+    return resp.json()
 
 
 async def get_subnational2_regions(state_code: str) -> list[dict]:
     """Get counties/regions for a state/province."""
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(
-            f"{EBIRD_BASE}/ref/region/list/subnational2/{state_code}",
-            headers=_headers(),
-        )
-        resp.raise_for_status()
-        return resp.json()
+    client = get_http_client()
+    resp = await client.get(
+        f"{EBIRD_BASE}/ref/region/list/subnational2/{state_code}",
+        headers=_headers(),
+    )
+    resp.raise_for_status()
+    return resp.json()
 
 
 async def get_species_list(region_code: str) -> list[str]:
     """Get species codes present in a region."""
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(
-            f"{EBIRD_BASE}/product/spplist/{region_code}",
-            headers=_headers(),
-        )
-        resp.raise_for_status()
-        return resp.json()
+    client = get_http_client()
+    resp = await client.get(
+        f"{EBIRD_BASE}/product/spplist/{region_code}",
+        headers=_headers(),
+    )
+    resp.raise_for_status()
+    return resp.json()
 
 
 async def get_region_frequency(region_code: str) -> dict[str, float]:
@@ -71,14 +96,14 @@ async def get_region_frequency(region_code: str) -> dict[str, float]:
         if (now - cached_at) < _FREQ_TTL:
             return cached_data
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.get(
-            f"{EBIRD_BASE}/data/obs/{region_code}/recent",
-            params={"back": 30},
-            headers=_headers(),
-        )
-        resp.raise_for_status()
-        observations = resp.json()
+    client = get_http_client()
+    resp = await client.get(
+        f"{EBIRD_BASE}/data/obs/{region_code}/recent",
+        params={"back": 30},
+        headers=_headers(),
+    )
+    resp.raise_for_status()
+    observations = resp.json()
 
     # Count observations per species
     obs_count: dict[str, int] = {}
