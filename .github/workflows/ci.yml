@@ -30,6 +30,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Run tests
+        run: npm test -- --ci --coverage
+
       - name: Build web export
         run: |
           echo 'BACKEND_URL=\nBACKEND_API_KEY=' > .env
