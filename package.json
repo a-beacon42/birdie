@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^3.0.1",
+    "@react-native-community/netinfo": "11.4.1",
     "axios": "^1.9.0",
     "expo": "^54.0.0",
     "expo-av": "~16.0.8",
@@ -61,8 +62,15 @@
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|zustand)"
     ],
-    "moduleFileExtensions": ["ts", "tsx", "js", "jsx"],
-    "testMatch": ["**/__tests__/**/*.(test|spec).(ts|tsx|js)"]
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.(test|spec).(ts|tsx|js)"
+    ]
   },
   "private": true
 }

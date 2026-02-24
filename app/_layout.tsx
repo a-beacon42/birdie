@@ -13,13 +13,18 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { colors } from "../src/theme";
 import ErrorBoundary from "../src/components/ErrorBoundary";
+import OfflineBanner from "../src/components/OfflineBanner";
+import { useNetworkStatus } from "../src/hooks/useNetworkStatus";
 
 export default function RootLayout() {
+    const { isConnected } = useNetworkStatus();
+
     const content = (
         <ErrorBoundary>
             <GestureHandlerRootView style={{ flex: 1 }}>
                 <SafeAreaProvider>
                     <StatusBar style="dark" />
+                    {!isConnected && <OfflineBanner />}
                     <Stack
                         screenOptions={{
                             headerShown: false,
