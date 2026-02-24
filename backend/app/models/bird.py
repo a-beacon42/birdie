@@ -112,3 +112,17 @@ class DataVersion(BaseModel):
     version: str
     total_species: int
     image_coverage_pct: float
+
+
+class FamilySummary(BaseModel):
+    """A unique bird family for filter dropdowns."""
+
+    family_code: str
+    family_com_name: str
+
+
+class RegionInfo(BaseModel):
+    """An eBird sub-region (state/province or county)."""
+
+    code: str
+    name: str

@@ -10,7 +10,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.config import settings
-from app.models.bird import Bird, BirdSummary, DataVersion
+from app.models.bird import Bird, BirdSummary, DataVersion, FamilySummary
 from app.services.bird_service import (
     get_bird_by_species_code,
     get_data_version,
@@ -58,7 +58,7 @@ def list_birds(
     )
 
 
-@router.get("/families")
+@router.get("/families", response_model=list[FamilySummary])
 @limiter.limit(settings.default_rate_limit)
 def list_families(request: Request) -> list[dict]:
     """Return all unique bird families."""
@@ -77,7 +77,9 @@ class DeckRequest(BaseModel):
 
     family: str | None = Field(None, max_length=30, description="Filter by family code")
     species_codes: list[str] | None = Field(
-        None, max_length=500, description="Species codes to filter by (from region lookup)"
+        None,
+        max_length=500,
+        description="Species codes to filter by (from region lookup)",
     )
     difficulty: Difficulty | None = Field(
         None, description="Difficulty tier: easy, medium, or hard"
@@ -150,7 +152,10 @@ async def create_deck(request: Request, req: DeckRequest) -> list[BirdSummary]:
             regional_freq = await get_region_frequency(req.region_code)
         except Exception:
             # Fall back to global frequency if eBird call fails
-            logger.warning("eBird frequency fetch failed for %s, falling back to global", req.region_code)
+            logger.warning(
+                "eBird frequency fetch failed for %s, falling back to global",
+                req.region_code,
+            )
             regional_freq = None
 
     return build_deck(

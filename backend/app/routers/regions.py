@@ -8,6 +8,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.config import settings
+from app.models.bird import RegionInfo
 from app.services.ebird_service import (
     get_region_frequency,
     get_species_list,
@@ -35,7 +36,7 @@ def _validate_region_code(code: str, label: str = "Region code") -> str:
     return code
 
 
-@router.get("/subnational1/{country_code}")
+@router.get("/subnational1/{country_code}", response_model=list[RegionInfo])
 @limiter.limit(settings.default_rate_limit)
 async def subnational1(
     request: Request,
@@ -47,10 +48,12 @@ async def subnational1(
         return await get_subnational1_regions(country_code)
     except Exception as exc:
         logger.exception("eBird subnational1 proxy error for %s", country_code)
-        raise HTTPException(status_code=502, detail="Failed to fetch region data. Please try again.")
+        raise HTTPException(
+            status_code=502, detail="Failed to fetch region data. Please try again."
+        )
 
 
-@router.get("/subnational2/{state_code}")
+@router.get("/subnational2/{state_code}", response_model=list[RegionInfo])
 @limiter.limit(settings.default_rate_limit)
 async def subnational2(
     request: Request,
@@ -62,7 +65,9 @@ async def subnational2(
         return await get_subnational2_regions(state_code)
     except Exception as exc:
         logger.exception("eBird subnational2 proxy error for %s", state_code)
-        raise HTTPException(status_code=502, detail="Failed to fetch region data. Please try again.")
+        raise HTTPException(
+            status_code=502, detail="Failed to fetch region data. Please try again."
+        )
 
 
 @router.get("/species/{region_code}")
@@ -77,7 +82,9 @@ async def species_list(
         return await get_species_list(region_code)
     except Exception as exc:
         logger.exception("eBird species list proxy error for %s", region_code)
-        raise HTTPException(status_code=502, detail="Failed to fetch species data. Please try again.")
+        raise HTTPException(
+            status_code=502, detail="Failed to fetch species data. Please try again."
+        )
 
 
 @router.get("/frequency/{region_code}")
@@ -97,4 +104,6 @@ async def region_frequency(
         return await get_region_frequency(region_code)
     except Exception as exc:
         logger.exception("eBird frequency proxy error for %s", region_code)
-        raise HTTPException(status_code=502, detail="Failed to fetch frequency data. Please try again.")
+        raise HTTPException(
+            status_code=502, detail="Failed to fetch frequency data. Please try again."
+        )
