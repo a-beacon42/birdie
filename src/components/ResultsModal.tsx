@@ -2,7 +2,7 @@
  * ResultsModal — End-of-game summary showing score breakdown.
  */
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
     Modal,
     View,
@@ -28,6 +28,15 @@ const ResultsModal: React.FC<ResultsModalProps> = ({
     onResetGame,
 }) => {
     const { answers, birds } = useGameStore();
+    const primaryBtnRef = useRef<View>(null);
+
+    /* Move accessibility focus to the primary action when the modal opens */
+    useEffect(() => {
+        if (visible) {
+            const id = setTimeout(() => primaryBtnRef.current?.focus(), 150);
+            return () => clearTimeout(id);
+        }
+    }, [visible]);
 
     const { correct, incorrect, skipped, total, pct, avgTime } = useMemo(() => {
         let c = 0, inc = 0, sk = 0;
@@ -83,6 +92,7 @@ const ResultsModal: React.FC<ResultsModalProps> = ({
 
                         <View style={styles.actionRow}>
                             <Pressable
+                                ref={primaryBtnRef}
                                 style={[styles.button, styles.buttonPrimary]}
                                 onPress={onEndGame}
                                 accessibilityRole="button"

@@ -60,6 +60,15 @@ const makePrompt = (name: string) =>
 const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
     const insets = useSafeAreaInsets();
     const listRef = useRef<FlatList<ChatMessage>>(null);
+    const closeBtnRef = useRef<View>(null);
+
+    /* Move accessibility focus to the close button when the modal opens */
+    useEffect(() => {
+        if (visible) {
+            const id = setTimeout(() => closeBtnRef.current?.focus(), 150);
+            return () => clearTimeout(id);
+        }
+    }, [visible]);
 
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
@@ -160,7 +169,7 @@ const BirdChatModal: React.FC<Props> = ({ visible, onClose, commonName }) => {
                     {/* Header */}
                     <View style={styles.header}>
                         <Text style={styles.title} numberOfLines={1} accessibilityRole="header">{commonName}</Text>
-                        <Pressable onPress={onClose} style={styles.doneBtn} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close chat">
+                        <Pressable ref={closeBtnRef} onPress={onClose} style={styles.doneBtn} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close chat">
                             <Text style={styles.doneText}>Done</Text>
                         </Pressable>
                     </View>

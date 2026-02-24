@@ -7,7 +7,7 @@
  * On web, falls back to an <iframe> since react-native-webview has no web support.
  */
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
     ActivityIndicator,
     Modal,
@@ -54,6 +54,15 @@ const WikipediaModal: React.FC<WikipediaModalProps> = ({
     title,
 }) => {
     const insets = useSafeAreaInsets();
+    const closeBtnRef = useRef<View>(null);
+
+    /* Move accessibility focus to the close button when the modal opens */
+    useEffect(() => {
+        if (visible) {
+            const id = setTimeout(() => closeBtnRef.current?.focus(), 150);
+            return () => clearTimeout(id);
+        }
+    }, [visible]);
 
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -64,6 +73,7 @@ const WikipediaModal: React.FC<WikipediaModalProps> = ({
                         {title || "Wikipedia"}
                     </Text>
                     <Pressable
+                        ref={closeBtnRef}
                         onPress={onClose}
                         style={styles.closeButton}
                         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
