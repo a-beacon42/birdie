@@ -14,7 +14,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from app.config import settings
-from app.routers import birds, chat, regions
+from app.routers import auth, birds, chat, regions
 from app.services.cosmos import get_birds_container
 from app.services.chat_service import close_http_client as close_chat_client
 from app.services.ebird_service import close_http_client as close_ebird_client
@@ -79,11 +79,12 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "X-API-Key"],
+    allow_headers=["Content-Type", "X-API-Key", "Authorization"],
 )
 
 # Register routers under versioned API prefix
 _API_V1 = "/api/v1"
+app.include_router(auth.router, prefix=_API_V1)
 app.include_router(birds.router, prefix=_API_V1)
 app.include_router(regions.router, prefix=_API_V1)
 app.include_router(chat.router, prefix=_API_V1)
@@ -101,11 +102,13 @@ async def health_ready():
     try:
         container = get_birds_container()
         # Lightweight: read 1 item to verify the connection
-        list(container.query_items(
-            query="SELECT VALUE COUNT(1) FROM c",
-            enable_cross_partition_query=True,
-            max_item_count=1,
-        ))
+        list(
+            container.query_items(
+                query="SELECT VALUE COUNT(1) FROM c",
+                enable_cross_partition_query=True,
+                max_item_count=1,
+            )
+        )
         return {"status": "ready", "cosmos": "connected"}
     except Exception as e:
         logger.warning("Readiness check failed: %s", e)

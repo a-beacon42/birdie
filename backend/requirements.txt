@@ -7,6 +7,7 @@ pydantic==2.10.6
 pydantic-settings==2.7.1
 python-dotenv==1.0.1
 slowapi==0.1.9
+PyJWT==2.11.0
 
 # --- Dev / Testing ---
 pytest==8.3.4

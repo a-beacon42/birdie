@@ -5,6 +5,7 @@ Supports two authentication modes:
   2. Managed identity — leave AZURE_OPENAI_API_KEY empty; uses DefaultAzureCredential (production)
 """
 
+import asyncio
 import logging
 
 import httpx
@@ -12,6 +13,11 @@ import httpx
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Retry settings
+_MAX_RETRIES = 2
+_RETRY_DELAY = 1.0  # seconds (doubles each retry)
+_RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504}
 
 # Cached token credential (only created once, when using managed identity)
 _credential = None
@@ -38,6 +44,7 @@ async def close_http_client() -> None:
     if _client and not _client.is_closed:
         await _client.aclose()
         _client = None
+
 
 # System prompt enforced server-side — never accepted from the client.
 SYSTEM_PROMPT = (
@@ -91,9 +98,45 @@ async def send_chat(bird_name: str, messages: list[dict]) -> dict:
     ]
 
     client = get_http_client()
-    resp = await client.post(url, headers=headers, json={"messages": full_messages})
-    resp.raise_for_status()
-    data = resp.json()
+    last_exc: Exception | None = None
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            resp = await client.post(
+                url, headers=headers, json={"messages": full_messages}
+            )
+            # Retry on transient HTTP errors
+            if resp.status_code in _RETRYABLE_STATUS and attempt < _MAX_RETRIES:
+                delay = _RETRY_DELAY * (2**attempt)
+                logger.warning(
+                    "Chat API returned %s, retrying in %.1fs (attempt %d/%d)",
+                    resp.status_code,
+                    delay,
+                    attempt + 1,
+                    _MAX_RETRIES,
+                )
+                await asyncio.sleep(delay)
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            break
+        except httpx.HTTPStatusError:
+            raise  # Already raised after retries exhausted
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.WriteTimeout) as exc:
+            last_exc = exc
+            if attempt < _MAX_RETRIES:
+                delay = _RETRY_DELAY * (2**attempt)
+                logger.warning(
+                    "Chat API connection error, retrying in %.1fs (attempt %d/%d): %s",
+                    delay,
+                    attempt + 1,
+                    _MAX_RETRIES,
+                    exc,
+                )
+                await asyncio.sleep(delay)
+            else:
+                raise
+    else:
+        raise last_exc or RuntimeError("Retries exhausted")
 
     choice = data.get("choices", [{}])[0]
     message = choice.get("message", {})
