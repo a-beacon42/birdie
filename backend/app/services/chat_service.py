@@ -9,6 +9,7 @@ Supports two authentication modes:
 """
 
 import logging
+import threading
 
 from openai import AsyncAzureOpenAI
 
@@ -17,6 +18,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 # Cached client & credential (created once per process)
+_client_lock = threading.Lock()
 _client: AsyncAzureOpenAI | None = None
 _credential = None
 _OPENAI_SCOPE = "https://cognitiveservices.azure.com/.default"
@@ -28,28 +30,33 @@ def _get_client() -> AsyncAzureOpenAI:
     if _client is not None:
         return _client
 
-    # Use API key when available; otherwise fall back to managed identity
-    if settings.azure_openai_api_key:
-        _client = AsyncAzureOpenAI(
-            api_key=settings.azure_openai_api_key,
-            azure_endpoint=settings.azure_openai_endpoint,
-            api_version=settings.azure_openai_api_version,
-            max_retries=2,
-            timeout=60.0,
-        )
-    else:
-        from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+    with _client_lock:
+        # Double-check after acquiring lock
+        if _client is not None:
+            return _client
 
-        if _credential is None:
-            _credential = DefaultAzureCredential()
-        token_provider = get_bearer_token_provider(_credential, _OPENAI_SCOPE)
-        _client = AsyncAzureOpenAI(
-            azure_ad_token_provider=token_provider,
-            azure_endpoint=settings.azure_openai_endpoint,
-            api_version=settings.azure_openai_api_version,
-            max_retries=2,
-            timeout=60.0,
-        )
+        # Use API key when available; otherwise fall back to managed identity
+        if settings.azure_openai_api_key:
+            _client = AsyncAzureOpenAI(
+                api_key=settings.azure_openai_api_key,
+                azure_endpoint=settings.azure_openai_endpoint,
+                api_version=settings.azure_openai_api_version,
+                max_retries=2,
+                timeout=60.0,
+            )
+        else:
+            from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+            if _credential is None:
+                _credential = DefaultAzureCredential()
+            token_provider = get_bearer_token_provider(_credential, _OPENAI_SCOPE)
+            _client = AsyncAzureOpenAI(
+                azure_ad_token_provider=token_provider,
+                azure_endpoint=settings.azure_openai_endpoint,
+                api_version=settings.azure_openai_api_version,
+                max_retries=2,
+                timeout=60.0,
+            )
 
     return _client
 

@@ -77,10 +77,10 @@ def needs_inaturalist_image(bird: dict, replace_wikimedia: bool) -> bool:
     return False
 
 
-def fetch_inat_photo(taxon_id: int) -> dict | None:
+def fetch_inat_photo(taxon_id: int) -> dict | None | str:
     """Fetch the default photo for a taxon from the iNaturalist API.
 
-    Returns an image dict matching the Bird.images schema, or None.
+    Returns an image dict matching the Bird.images schema, None, or 'RATE_LIMITED'.
     """
     try:
         resp = requests.get(

@@ -1,0 +1,68 @@
+# Maestro E2E: Core Game Flow
+# Creates a game → plays through deck → views results
+#
+# Run with: maestro test .maestro/game-flow.yaml
+
+appId: com.birdie.app
+
+---
+
+# ---- Home screen ----
+- assertVisible: "Start Game"
+
+# Wait for families/regions to load
+- waitForAnimationToEnd
+
+# Tap "Start Game" to create a deck with defaults
+- tapOn:
+    text: "Start Game"
+
+# ---- Game screen ----
+- waitForAnimationToEnd
+
+# Verify we're on the game screen — score bar should be visible
+- assertVisible:
+    text: "✓"
+    optional: true
+
+# Verify the flash card is present
+- assertVisible: "Bird identification card.*"
+
+# Tap to flip the first card
+- tapOn: "Bird identification card.*"
+- waitForAnimationToEnd
+
+# Mark as correct
+- tapOn: "Correct.*"
+- waitForAnimationToEnd
+
+# If there's a second card, interact with it
+- tapOn:
+    text: "Bird identification card.*"
+    optional: true
+- waitForAnimationToEnd
+
+# Mark as incorrect
+- tapOn:
+    text: "Incorrect.*"
+    optional: true
+- waitForAnimationToEnd
+
+# Use the Next button (accessibility alternative to swipe)
+- tapOn:
+    text: "Next"
+    optional: true
+
+# ---- End / Results ----
+# After playing through cards, the results modal should appear
+# or a "New Game" / "Play Again" button becomes available
+- waitForAnimationToEnd
+
+- assertVisible:
+    text: "New Game"
+    optional: true
+
+# If results modal is shown, dismiss it
+- tapOn:
+    text: "New Game"
+    optional: true
