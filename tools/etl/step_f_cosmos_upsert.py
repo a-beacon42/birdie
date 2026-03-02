@@ -52,9 +52,10 @@ def run() -> None:
     total_with_wiki = sum(1 for s in species if s.get("wikipedia_url"))
     total_with_freq = sum(1 for s in species if s.get("global_frequency", 0) > 0)
 
-    pct = lambda n: f"{n/total*100:.1f}%" if total else "N/A"
+    def pct(n: int) -> str:
+        return f"{n/total*100:.1f}%" if total else "N/A"
 
-    print(f"\n  === ETL Summary ===")
+    print("\n  === ETL Summary ===")
     print(f"  Total species:        {total}")
     print(f"  With images:          {total_with_images} ({pct(total_with_images)})")
     print(f"  With iNat images:     {total_with_inat} ({pct(total_with_inat)})")

@@ -148,7 +148,7 @@ def run() -> None:
         high = sum(1 for f in scored if f >= 0.5)
         medium = sum(1 for f in scored if 0.1 <= f < 0.5)
         low = sum(1 for f in scored if f < 0.1)
-        print(f"\n  Frequency distribution (species with data):")
+        print("\n  Frequency distribution (species with data):")
         print(f"    High (≥0.5):  {high}")
         print(f"    Medium:       {medium}")
         print(f"    Low (<0.1):   {low}")

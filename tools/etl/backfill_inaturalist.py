@@ -259,13 +259,13 @@ def main():
             time.sleep(args.delay)
 
     except KeyboardInterrupt:
-        print(f"\n\n  Interrupted! Saving progress...")
+        print("\n\n  Interrupted! Saving progress...")
 
     # Final progress save
     save_progress(processed)
 
     # Summary
-    print(f"\n  === Backfill Summary ===")
+    print("\n  === Backfill Summary ===")
     print(f"  Processed:       {len(processed)} species")
     print(f"  Photos fetched:  {fetched}")
     print(f"  Skipped/no photo:{skipped}")
