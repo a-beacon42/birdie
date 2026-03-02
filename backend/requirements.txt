@@ -9,6 +9,9 @@ pydantic-settings==2.7.1
 python-dotenv==1.0.1
 slowapi==0.1.9
 PyJWT==2.11.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.0
+cryptography==44.0.0
 
 # --- Observability ---
 opentelemetry-api==1.29.0

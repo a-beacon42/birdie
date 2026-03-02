@@ -146,6 +146,8 @@ async def lifespan(app: FastAPI):
         missing.append("EBIRD_API_KEY")
     if settings.is_production and not settings.api_key:
         missing.append("API_KEY (required in production)")
+    if not settings.email_encryption_key:
+        missing.append("EMAIL_ENCRYPTION_KEY (required for user accounts)")
 
     if missing:
         logger.warning("Missing configuration: %s", ", ".join(missing))
@@ -181,7 +183,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "X-API-Key", "Authorization", "X-Request-ID"],
 )
 

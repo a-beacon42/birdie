@@ -17,8 +17,14 @@ _lock = threading.Lock()
 _client: CosmosClient | None = None
 _database: DatabaseProxy | None = None
 _birds_container: ContainerProxy | None = None
+_users_container: ContainerProxy | None = None
+_decks_container: ContainerProxy | None = None
+_sessions_container: ContainerProxy | None = None
 
 BIRDS_CONTAINER = "birds"
+USERS_CONTAINER = "users"
+DECKS_CONTAINER = "decks"
+SESSIONS_CONTAINER = "game_sessions"
 
 
 def get_cosmos_client() -> CosmosClient:
@@ -77,3 +83,49 @@ def get_birds_container() -> ContainerProxy:
                 # Managed identity — container must already exist
                 _birds_container = db.get_container_client(BIRDS_CONTAINER)
     return _birds_container
+
+
+def _get_or_create_container(name: str, partition_path: str) -> ContainerProxy:
+    """Helper — get or create a Cosmos container by name and partition key path."""
+    db = get_database()
+    if settings.cosmos_key:
+        return db.create_container_if_not_exists(
+            id=name,
+            partition_key=PartitionKey(path=partition_path),
+        )
+    return db.get_container_client(name)
+
+
+def get_users_container() -> ContainerProxy:
+    """Get (or create) the users container. Partition key: /id."""
+    global _users_container
+    if _users_container is not None:
+        return _users_container
+    with _lock:
+        if _users_container is None:
+            _users_container = _get_or_create_container(USERS_CONTAINER, "/id")
+    return _users_container
+
+
+def get_decks_container() -> ContainerProxy:
+    """Get (or create) the decks container. Partition key: /user_id."""
+    global _decks_container
+    if _decks_container is not None:
+        return _decks_container
+    with _lock:
+        if _decks_container is None:
+            _decks_container = _get_or_create_container(DECKS_CONTAINER, "/user_id")
+    return _decks_container
+
+
+def get_sessions_container() -> ContainerProxy:
+    """Get (or create) the game_sessions container. Partition key: /user_id."""
+    global _sessions_container
+    if _sessions_container is not None:
+        return _sessions_container
+    with _lock:
+        if _sessions_container is None:
+            _sessions_container = _get_or_create_container(
+                SESSIONS_CONTAINER, "/user_id"
+            )
+    return _sessions_container
