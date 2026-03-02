@@ -95,7 +95,7 @@ async def chat(
         return ChatResponse(**result)
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception:
         logger.exception("Chat proxy error")
         raise HTTPException(
             status_code=502,

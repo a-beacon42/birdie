@@ -37,16 +37,20 @@ def _make_bird(code: str = "norcar") -> Bird:
 @pytest.fixture
 def client():
     from app.config import Settings
+
     test_settings = Settings()
 
-    with patch("app.routers.birds.settings", test_settings), \
-         patch("app.routers.chat.settings", test_settings), \
-         patch("app.routers.regions.settings", test_settings), \
-         patch("app.main.settings", test_settings), \
-         patch("app.services.cosmos.get_birds_container") as mock_container:
+    with (
+        patch("app.routers.birds.settings", test_settings),
+        patch("app.routers.chat.settings", test_settings),
+        patch("app.routers.regions.settings", test_settings),
+        patch("app.main.settings", test_settings),
+        patch("app.services.cosmos.get_birds_container") as mock_container,
+    ):
         mock_container.return_value = MagicMock()
 
         from app.main import app
+
         yield TestClient(app, raise_server_exceptions=False)
 
 
@@ -97,8 +101,10 @@ class TestGetBird:
 class TestCreateDeck:
     def test_create_deck_returns_birds(self, client):
         summaries = [_make_summary(f"b{i}") for i in range(5)]
-        with patch("app.routers.birds.query_birds", return_value=summaries), \
-             patch("app.routers.birds.build_deck", return_value=summaries[:3]):
+        with (
+            patch("app.routers.birds.query_birds", return_value=summaries),
+            patch("app.routers.birds.build_deck", return_value=summaries[:3]),
+        ):
             resp = client.post("/api/v1/birds/deck", json={"limit": 3})
             assert resp.status_code == 200
             assert len(resp.json()) == 3
@@ -125,7 +131,9 @@ class TestFamilies:
 
 class TestDataVersion:
     def test_data_version(self, client):
-        version = DataVersion(version="2024.1", total_species=100, image_coverage_pct=85.5)
+        version = DataVersion(
+            version="2024.1", total_species=100, image_coverage_pct=85.5
+        )
         with patch("app.routers.birds.get_data_version", return_value=version):
             resp = client.get("/api/v1/birds/version")
             assert resp.status_code == 200

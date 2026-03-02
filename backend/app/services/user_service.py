@@ -24,7 +24,7 @@ from azure.cosmos.exceptions import (
 )
 
 from app.config import settings
-from app.models.user import User, UserResponse
+from app.models.user import UserResponse
 from app.services.cosmos import (
     get_users_container,
     get_decks_container,

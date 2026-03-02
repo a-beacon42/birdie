@@ -1,7 +1,5 @@
 """Tests for the difficulty scoring and deck building service."""
 
-import pytest
-
 from app.models.bird import BirdSummary
 from app.services.difficulty_service import (
     build_deck,

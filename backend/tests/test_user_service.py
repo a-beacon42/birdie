@@ -1,9 +1,8 @@
 """Tests for user account service — registration, auth, password, deletion."""
 
-import hashlib
 import time
 from datetime import datetime, timezone, timedelta
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import jwt
 import pytest
@@ -39,9 +38,11 @@ def _make_test_settings(**overrides):
 @pytest.fixture
 def mock_settings():
     s = _make_test_settings()
-    with patch("app.services.user_service.settings", s), patch(
-        "app.dependencies.auth.settings", s
-    ), patch("app.routers.auth.settings", s):
+    with (
+        patch("app.services.user_service.settings", s),
+        patch("app.dependencies.auth.settings", s),
+        patch("app.routers.auth.settings", s),
+    ):
         yield s
 
 
@@ -51,12 +52,12 @@ def mock_containers():
     users = MagicMock()
     decks = MagicMock()
     sessions = MagicMock()
-    with patch(
-        "app.services.user_service.get_users_container", return_value=users
-    ), patch(
-        "app.services.user_service.get_decks_container", return_value=decks
-    ), patch(
-        "app.services.user_service.get_sessions_container", return_value=sessions
+    with (
+        patch("app.services.user_service.get_users_container", return_value=users),
+        patch("app.services.user_service.get_decks_container", return_value=decks),
+        patch(
+            "app.services.user_service.get_sessions_container", return_value=sessions
+        ),
     ):
         yield users, decks, sessions
 
@@ -599,23 +600,19 @@ class TestAuthDependency:
 @pytest.fixture
 def client(mock_settings):
     """Create a test client with user auth infrastructure mocked."""
-    from app.config import Settings
 
     test_settings = _make_test_settings()
 
-    with patch("app.routers.auth.settings", test_settings), patch(
-        "app.routers.chat.settings", test_settings
-    ), patch("app.routers.birds.settings", test_settings), patch(
-        "app.routers.regions.settings", test_settings
-    ), patch(
-        "app.main.settings", test_settings
-    ), patch(
-        "app.dependencies.auth.settings", test_settings
-    ), patch(
-        "app.services.user_service.settings", test_settings
-    ), patch(
-        "app.services.cosmos.get_birds_container"
-    ) as mock_birds:
+    with (
+        patch("app.routers.auth.settings", test_settings),
+        patch("app.routers.chat.settings", test_settings),
+        patch("app.routers.birds.settings", test_settings),
+        patch("app.routers.regions.settings", test_settings),
+        patch("app.main.settings", test_settings),
+        patch("app.dependencies.auth.settings", test_settings),
+        patch("app.services.user_service.settings", test_settings),
+        patch("app.services.cosmos.get_birds_container") as mock_birds,
+    ):
         mock_birds.return_value = MagicMock()
 
         from app.main import app
