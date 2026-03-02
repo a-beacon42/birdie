@@ -27,6 +27,14 @@ import { colors, spacing, radii, typography } from "../theme";
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Get a property value from an item using a string field name.
+ * This replaces `(item as any)[field]` with a type-safe helper.
+ */
+function getField<T, K extends keyof T & string>(item: T, field: K): T[K] {
+    return item[field];
+}
+
 export interface SearchableDropdownProps<T> {
     /** Label shown above the dropdown when focused */
     label: string;
@@ -100,19 +108,19 @@ function SearchableDropdownInner<T>(props: SearchableDropdownProps<T>) {
     /* ---- derived ------------------------------------------------- */
 
     const selectedItem = useMemo(
-        () => data.find((d) => (d as any)[valueField] === value) ?? null,
+        () => data.find((d) => getField(d, valueField) === value) ?? null,
         [data, value, valueField],
     );
 
     const displayText = selectedItem
-        ? String((selectedItem as any)[labelField])
+        ? String(getField(selectedItem, labelField))
         : placeholder;
 
     const filteredData = useMemo(() => {
         if (!searchText) return data;
         const lower = searchText.toLowerCase();
         return data.filter((item) =>
-            String((item as any)[labelField]).toLowerCase().includes(lower),
+            String(getField(item, labelField)).toLowerCase().includes(lower),
         );
     }, [data, searchText, labelField]);
 
@@ -146,7 +154,7 @@ function SearchableDropdownInner<T>(props: SearchableDropdownProps<T>) {
 
     const renderItem = useCallback(
         ({ item }: ListRenderItemInfo<T>) => {
-            const itemValue = (item as any)[valueField];
+            const itemValue = getField(item, valueField);
             const isSelected = itemValue === value;
             return (
                 <Pressable
@@ -161,7 +169,7 @@ function SearchableDropdownInner<T>(props: SearchableDropdownProps<T>) {
                         style={[styles.itemText, isSelected && styles.itemTextSelected]}
                         numberOfLines={1}
                     >
-                        {String((item as any)[labelField])}
+                        {String(getField(item, labelField))}
                     </Text>
                 </Pressable>
             );

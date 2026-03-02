@@ -77,10 +77,10 @@ def needs_inaturalist_image(bird: dict, replace_wikimedia: bool) -> bool:
     return False
 
 
-def fetch_inat_photo(taxon_id: int) -> dict | None:
+def fetch_inat_photo(taxon_id: int) -> dict | None | str:
     """Fetch the default photo for a taxon from the iNaturalist API.
 
-    Returns an image dict matching the Bird.images schema, or None.
+    Returns an image dict matching the Bird.images schema, None, or 'RATE_LIMITED'.
     """
     try:
         resp = requests.get(
@@ -259,13 +259,13 @@ def main():
             time.sleep(args.delay)
 
     except KeyboardInterrupt:
-        print(f"\n\n  Interrupted! Saving progress...")
+        print("\n\n  Interrupted! Saving progress...")
 
     # Final progress save
     save_progress(processed)
 
     # Summary
-    print(f"\n  === Backfill Summary ===")
+    print("\n  === Backfill Summary ===")
     print(f"  Processed:       {len(processed)} species")
     print(f"  Photos fetched:  {fetched}")
     print(f"  Skipped/no photo:{skipped}")
@@ -283,10 +283,10 @@ def main():
         )
         print(f"\n  Total species:        {len(all_birds)}")
         print(
-            f"  With any image:       {total_with_images} ({total_with_images/len(all_birds)*100:.1f}%)"
+            f"  With any image:       {total_with_images} ({total_with_images / len(all_birds) * 100:.1f}%)"
         )
         print(
-            f"  With iNaturalist img: {total_with_inat} ({total_with_inat/len(all_birds)*100:.1f}%)"
+            f"  With iNaturalist img: {total_with_inat} ({total_with_inat / len(all_birds) * 100:.1f}%)"
         )
 
 

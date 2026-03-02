@@ -33,9 +33,18 @@ const ScoreBar: React.FC<ScoreBarProps> = ({
     return (
         <View style={styles.container} accessibilityRole="summary" accessibilityLabel={`Score: ${correct} correct, ${incorrect} incorrect, ${skipped} skipped out of ${total}`}>
             <View style={styles.statsRow}>
-                <Text style={[styles.stat, { color: colors.incorrect }]} accessibilityLabel={`${incorrect} incorrect`}>✗ {incorrect}</Text>
-                <Text style={[styles.stat, { color: colors.textMuted }]} accessibilityLabel={`${skipped} skipped`}>— {skipped}</Text>
-                <Text style={[styles.stat, { color: colors.correct }]} accessibilityLabel={`${correct} correct`}>✓ {correct}</Text>
+                <View style={styles.statGroup}>
+                    <Text style={[styles.statIcon, { color: colors.incorrect }]} accessibilityLabel="">✕</Text>
+                    <Text style={[styles.stat, { color: colors.incorrect }]} accessibilityLabel={`${incorrect} incorrect`}>{incorrect}</Text>
+                </View>
+                <View style={styles.statGroup}>
+                    <Text style={[styles.statIcon, { color: colors.textMuted }]} accessibilityLabel="">⊘</Text>
+                    <Text style={[styles.stat, { color: colors.textMuted }]} accessibilityLabel={`${skipped} skipped`}>{skipped}</Text>
+                </View>
+                <View style={styles.statGroup}>
+                    <Text style={[styles.statIcon, { color: colors.correct }]} accessibilityLabel="">✔</Text>
+                    <Text style={[styles.stat, { color: colors.correct }]} accessibilityLabel={`${correct} correct`}>{correct}</Text>
+                </View>
             </View>
             <View style={styles.track}>
                 <View style={[styles.fill, { flex: progress }]} />
@@ -62,6 +71,15 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         alignItems: "center",
         marginBottom: spacing.xs,
+    },
+    statGroup: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+    },
+    statIcon: {
+        fontSize: 16,
+        fontWeight: "700" as const,
     },
     stat: {
         ...typography.label,

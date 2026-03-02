@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     # API authentication
     api_key: str = ""  # Required for chat endpoint; set in .env
 
+    # User accounts
+    email_encryption_key: str = ""  # 32-byte hex key for AES-256-GCM email encryption
+    user_token_lifetime: int = 86400  # 24 hours for authenticated user JWTs
+    bcrypt_rounds: int = 12
+    max_failed_logins: int = 5
+    lockout_duration_minutes: int = 15
+
     # Rate limiting
     chat_rate_limit: str = "20/hour"  # slowapi rate string
     default_rate_limit: str = "120/minute"  # general API endpoints

@@ -6,12 +6,17 @@
     "scheme": "birdie",
     "orientation": "portrait",
     "icon": "./assets/birdie-icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "dark": {
+        "image": "./assets/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#1a1a2e"
+      }
     },
     "ios": {
       "supportsTablet": true,
@@ -46,7 +51,13 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      [
+        "expo-updates",
+        {
+          "username": "birdie"
+        }
+      ]
     ],
     "extra": {
       "eas": {
@@ -59,7 +70,8 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": ""
+      "url": "https://u.expo.dev/birdie",
+      "fallbackToCacheTimeout": 0
     }
   }
 }

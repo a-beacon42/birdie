@@ -9,7 +9,6 @@ Loads species from Cosmos DB and upserts results back directly.
 This is the most time-intensive step (~15-30 min for download + processing).
 """
 
-import gzip
 import json
 import os
 
@@ -115,7 +114,7 @@ def run() -> list[dict]:
     _download_s3_file(PHOTOS_KEY, PHOTOS_LOCAL)
 
     taxa_df = _load_taxa()
-    photos_df = _load_photos()
+    _load_photos()  # Validate file is readable; photos fetched via API below
 
     # Build species DataFrame from our taxonomy
     species_df = pd.DataFrame(species)[["species_code", "sci_name"]]
@@ -145,7 +144,7 @@ def run() -> list[dict]:
 
     with_images = sum(1 for s in species if s["images"])
     print(
-        f"  Species with images: {with_images}/{len(species)} ({with_images/len(species)*100:.1f}%)"
+        f"  Species with images: {with_images}/{len(species)} ({with_images / len(species) * 100:.1f}%)"
     )
 
     return species

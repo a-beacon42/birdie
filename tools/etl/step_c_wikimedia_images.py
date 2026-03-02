@@ -5,7 +5,6 @@ to fetch a CC-licensed photo from Wikimedia Commons via the Wikipedia API.
 Updated documents are upserted directly back to Cosmos DB.
 """
 
-import sys
 import time
 
 import requests

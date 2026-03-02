@@ -17,4 +17,5 @@ def _isolate_env(monkeypatch):
     monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4")
     monkeypatch.setenv("AZURE_OPENAI_API_KEY", "fake-openai-key")
     monkeypatch.setenv("API_KEY", "test-api-key-12345")
+    monkeypatch.setenv("EMAIL_ENCRYPTION_KEY", "aa" * 32)  # 64 hex chars = 32 bytes
     monkeypatch.setenv("ENVIRONMENT", "development")

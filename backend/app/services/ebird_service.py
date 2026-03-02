@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import threading
 import time
 
 import httpx
@@ -22,6 +23,7 @@ _freq_cache: dict[str, tuple[float, dict[str, float]]] = {}
 _FREQ_TTL: float = 3600  # 1 hour
 
 # Persistent HTTP client — reused across requests for connection pooling
+_client_lock = threading.Lock()
 _client: httpx.AsyncClient | None = None
 
 
@@ -29,10 +31,14 @@ def get_http_client() -> httpx.AsyncClient:
     """Get or create a persistent async HTTP client for eBird API calls."""
     global _client
     if _client is None or _client.is_closed:
-        _client = httpx.AsyncClient(
-            timeout=30.0,
-            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
-        )
+        with _client_lock:
+            if _client is None or _client.is_closed:
+                _client = httpx.AsyncClient(
+                    timeout=30.0,
+                    limits=httpx.Limits(
+                        max_connections=20, max_keepalive_connections=10
+                    ),
+                )
     return _client
 
 
