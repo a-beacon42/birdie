@@ -53,7 +53,7 @@ def run() -> None:
     total_with_freq = sum(1 for s in species if s.get("global_frequency", 0) > 0)
 
     def pct(n: int) -> str:
-        return f"{n/total*100:.1f}%" if total else "N/A"
+        return f"{n / total * 100:.1f}%" if total else "N/A"
 
     print("\n  === ETL Summary ===")
     print(f"  Total species:        {total}")

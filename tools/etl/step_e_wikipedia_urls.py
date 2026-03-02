@@ -22,8 +22,7 @@ def run() -> list[dict]:
     container = get_container()
 
     query = (
-        "SELECT * FROM c WHERE c.wikipedia_url = '' "
-        "OR NOT IS_DEFINED(c.wikipedia_url)"
+        "SELECT * FROM c WHERE c.wikipedia_url = '' OR NOT IS_DEFINED(c.wikipedia_url)"
     )
     print("  Querying Cosmos DB for species missing Wikipedia URLs...")
     species = list(

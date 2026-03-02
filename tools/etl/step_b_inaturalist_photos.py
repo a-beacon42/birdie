@@ -144,7 +144,7 @@ def run() -> list[dict]:
 
     with_images = sum(1 for s in species if s["images"])
     print(
-        f"  Species with images: {with_images}/{len(species)} ({with_images/len(species)*100:.1f}%)"
+        f"  Species with images: {with_images}/{len(species)} ({with_images / len(species) * 100:.1f}%)"
     )
 
     return species

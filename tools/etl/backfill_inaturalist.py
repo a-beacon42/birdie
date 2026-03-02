@@ -283,10 +283,10 @@ def main():
         )
         print(f"\n  Total species:        {len(all_birds)}")
         print(
-            f"  With any image:       {total_with_images} ({total_with_images/len(all_birds)*100:.1f}%)"
+            f"  With any image:       {total_with_images} ({total_with_images / len(all_birds) * 100:.1f}%)"
         )
         print(
-            f"  With iNaturalist img: {total_with_inat} ({total_with_inat/len(all_birds)*100:.1f}%)"
+            f"  With iNaturalist img: {total_with_inat} ({total_with_inat / len(all_birds) * 100:.1f}%)"
         )
 
 
