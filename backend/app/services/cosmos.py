@@ -13,7 +13,7 @@ from azure.cosmos.database import DatabaseProxy
 
 from app.config import settings
 
-_lock = threading.Lock()
+_lock = threading.RLock()
 _client: CosmosClient | None = None
 _database: DatabaseProxy | None = None
 _birds_container: ContainerProxy | None = None
