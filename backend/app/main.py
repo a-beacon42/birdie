@@ -201,6 +201,16 @@ app.include_router(regions.router, prefix=_API_V1)
 app.include_router(stats.router, prefix=_API_V1)
 app.include_router(chat.router, prefix=_API_V1)
 
+# Backward-compat: also serve routes at /api (without version prefix)
+# so existing callers that haven't migrated to /api/v1 still work.
+_API_COMPAT = "/api"
+app.include_router(auth.router, prefix=_API_COMPAT, include_in_schema=False)
+app.include_router(birds.router, prefix=_API_COMPAT, include_in_schema=False)
+app.include_router(decks.router, prefix=_API_COMPAT, include_in_schema=False)
+app.include_router(regions.router, prefix=_API_COMPAT, include_in_schema=False)
+app.include_router(stats.router, prefix=_API_COMPAT, include_in_schema=False)
+app.include_router(chat.router, prefix=_API_COMPAT, include_in_schema=False)
+
 
 @app.get("/health")
 async def health():
