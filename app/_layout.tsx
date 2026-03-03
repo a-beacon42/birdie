@@ -36,11 +36,10 @@ export default function RootLayout() {
                     <StatusBar style="dark" />
                     {!isConnected && <OfflineBanner />}
                     <Stack screenOptions={stackScreenOptions}>
-                        <Stack.Screen name="index" />
+                        <Stack.Screen name="(tabs)" />
                         <Stack.Screen name="game" />
                         <Stack.Screen name="login" />
                         <Stack.Screen name="register" />
-                        <Stack.Screen name="profile" />
                         <Stack.Screen name="decks" />
                         <Stack.Screen name="stats" />
                     </Stack>

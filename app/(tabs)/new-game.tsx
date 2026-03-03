@@ -1,7 +1,7 @@
 /**
- * Home screen — Game setup / create game.
+ * New Game tab — game setup / filter selection.
  *
- * Users select filters (family, region, count) and start a game.
+ * Users select filters (family, region, difficulty, count) and start a game.
  * Data flows from the backend API via hooks instead of bundled JSON.
  */
 
@@ -15,18 +15,17 @@ import {
     ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { showAlert } from "../src/utils/alert";
+import { showAlert } from "../../src/utils/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, spacing, radii, typography, shadows } from "../src/theme";
-import { useFamilies, useSubnational1, useSubnational2 } from "../src/hooks/useApi";
-import { useGameStore } from "../src/stores/gameStore";
-import { usePreferencesStore } from "../src/stores/preferencesStore";
-import { useAuthStore } from "../src/stores/authStore";
-import { createDeck, getSpeciesList } from "../src/api/birdieApi";
-import type { Difficulty } from "../src/api/birdieApi";
-import type { BirdFamily, Region } from "../src/types/bird";
-import SearchableDropdown from "../src/components/SearchableDropdown";
-import allCountries from "../src/data/AllCountries.json";
+import { colors, spacing, radii, typography, shadows } from "../../src/theme";
+import { useFamilies, useSubnational1, useSubnational2 } from "../../src/hooks/useApi";
+import { useGameStore } from "../../src/stores/gameStore";
+import { usePreferencesStore } from "../../src/stores/preferencesStore";
+import { createDeck, getSpeciesList } from "../../src/api/birdieApi";
+import type { Difficulty } from "../../src/api/birdieApi";
+import type { BirdFamily, Region } from "../../src/types/bird";
+import SearchableDropdown from "../../src/components/SearchableDropdown";
+import allCountries from "../../src/data/AllCountries.json";
 
 type Country = { name: string; code: string };
 
@@ -38,10 +37,9 @@ const DIFFICULTIES: { key: Difficulty | null; label: string }[] = [
     { key: "hard", label: "Hard" },
 ];
 
-export default function HomeScreen() {
+export default function NewGameScreen() {
     const router = useRouter();
     const startGame = useGameStore((s) => s.startGame);
-    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
     // Persisted filter preferences
     const cardCount = usePreferencesStore((s) => s.cardCount);
@@ -64,13 +62,19 @@ export default function HomeScreen() {
     const { data: subnational1 } = useSubnational1(selectedCountry || null);
     const { data: subnational2 } = useSubnational2(selectedState || null);
 
-    const handleCountryChange = useCallback((item: Country) => {
-        setSelectedCountry(item.code);
-    }, [setSelectedCountry]);
+    const handleCountryChange = useCallback(
+        (item: Country) => {
+            setSelectedCountry(item.code);
+        },
+        [setSelectedCountry],
+    );
 
-    const handleStateChange = useCallback((item: Region) => {
-        setSelectedState(item.code);
-    }, [setSelectedState]);
+    const handleStateChange = useCallback(
+        (item: Region) => {
+            setSelectedState(item.code);
+        },
+        [setSelectedState],
+    );
 
     const handleCreateGame = useCallback(async () => {
         setCreating(true);
@@ -110,7 +114,7 @@ export default function HomeScreen() {
 
             const regionParts: string[] = [];
             const countryObj = (allCountries as Country[]).find(
-                (c) => c.code === selectedCountry
+                (c) => c.code === selectedCountry,
             );
             if (countryObj) regionParts.push(countryObj.name);
             const stateObj = subnational1?.find((s) => s.code === selectedState);
@@ -131,7 +135,19 @@ export default function HomeScreen() {
         } finally {
             setCreating(false);
         }
-    }, [cardCount, selectedFamily, selectedDifficulty, selectedCountry, selectedState, selectedCounty, families, subnational1, subnational2, startGame, router]);
+    }, [
+        cardCount,
+        selectedFamily,
+        selectedDifficulty,
+        selectedCountry,
+        selectedState,
+        selectedCounty,
+        families,
+        subnational1,
+        subnational2,
+        startGame,
+        router,
+    ]);
 
     const handleClearFilters = useCallback(() => {
         clearAll();
@@ -144,52 +160,6 @@ export default function HomeScreen() {
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <Text style={styles.title}>birdie</Text>
-                </View>
-
-                {/* Navigation bar */}
-                <View style={styles.navBar}>
-                    {isAuthenticated() ? (
-                        <>
-                            <Pressable
-                                style={styles.navButton}
-                                onPress={() => router.push("/decks")}
-                                accessibilityRole="button"
-                                accessibilityLabel="My saved decks"
-                            >
-                                <Text style={styles.navButtonText}>📚 Decks</Text>
-                            </Pressable>
-                            <Pressable
-                                style={styles.navButton}
-                                onPress={() => router.push("/stats")}
-                                accessibilityRole="button"
-                                accessibilityLabel="My stats"
-                            >
-                                <Text style={styles.navButtonText}>📊 Stats</Text>
-                            </Pressable>
-                            <Pressable
-                                style={styles.navButton}
-                                onPress={() => router.push("/profile")}
-                                accessibilityRole="button"
-                                accessibilityLabel="My profile"
-                            >
-                                <Text style={styles.navButtonText}>👤 Profile</Text>
-                            </Pressable>
-                        </>
-                    ) : (
-                        <Pressable
-                            style={styles.navButton}
-                            onPress={() => router.push("/login")}
-                            accessibilityRole="button"
-                            accessibilityLabel="Log in or sign up"
-                        >
-                            <Text style={styles.navButtonText}>Log In / Sign Up</Text>
-                        </Pressable>
-                    )}
-                </View>
-
                 {/* Card */}
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>New Game</Text>
@@ -221,7 +191,10 @@ export default function HomeScreen() {
                         {DIFFICULTIES.map((d) => (
                             <Pressable
                                 key={d.label}
-                                style={[styles.chip, selectedDifficulty === d.key && styles.chipActive]}
+                                style={[
+                                    styles.chip,
+                                    selectedDifficulty === d.key && styles.chipActive,
+                                ]}
                                 onPress={() => setSelectedDifficulty(d.key)}
                             >
                                 <Text
@@ -239,7 +212,10 @@ export default function HomeScreen() {
                     {/* Family filter */}
                     <SectionHeader label="Family (optional)" />
                     {familiesLoading ? (
-                        <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.sm }} />
+                        <ActivityIndicator
+                            color={colors.primary}
+                            style={{ marginVertical: spacing.sm }}
+                        />
                     ) : familiesError ? (
                         <Text style={styles.errorText}>Could not load families</Text>
                     ) : (
@@ -293,7 +269,11 @@ export default function HomeScreen() {
                     {/* Actions */}
                     <View style={styles.actionRow}>
                         <Pressable
-                            style={[styles.button, styles.buttonPrimary, creating && styles.buttonDisabled]}
+                            style={[
+                                styles.button,
+                                styles.buttonPrimary,
+                                creating && styles.buttonDisabled,
+                            ]}
                             onPress={handleCreateGame}
                             disabled={creating}
                         >
@@ -333,41 +313,8 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: spacing.lg,
+        paddingTop: spacing.lg,
         paddingBottom: spacing.xxl,
-    },
-    header: {
-        alignItems: "center",
-        paddingTop: spacing.xl,
-        paddingBottom: spacing.sm,
-    },
-    title: {
-        ...typography.h1,
-        color: colors.primary,
-        fontSize: 36,
-    },
-    subtitle: {
-        ...typography.body,
-        color: colors.textSecondary,
-        marginTop: spacing.xs,
-    },
-    navBar: {
-        flexDirection: "row",
-        justifyContent: "center",
-        gap: spacing.sm,
-        marginBottom: spacing.lg,
-    },
-    navButton: {
-        paddingVertical: spacing.xs,
-        paddingHorizontal: spacing.md,
-        borderRadius: radii.full,
-        borderWidth: 1.5,
-        borderColor: colors.primary + "40",
-        backgroundColor: colors.primary + "10",
-    },
-    navButtonText: {
-        ...typography.label,
-        color: colors.primary,
-        fontSize: 13,
     },
     card: {
         backgroundColor: colors.surface,
