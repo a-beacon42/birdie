@@ -17,8 +17,9 @@ COPY src/ ./src/
 
 # Build the static web export.
 # BACKEND_URL is intentionally empty so API calls use relative paths (same origin).
-RUN echo 'BACKEND_URL=\nBACKEND_API_KEY=' > .env \
-    && npx expo export --platform web
+RUN printf 'BACKEND_URL=\nBACKEND_API_KEY=\n' > .env \
+    && npx expo export --platform web \
+    && sed -i 's/<script src="/<script type="module" src="/g' dist/index.html
 
 # =============================================================
 # Stage 2 — Python API + static web files
