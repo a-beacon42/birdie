@@ -24,6 +24,7 @@ import logging
 from azure.cosmos import PartitionKey
 from azure.cosmos.database import DatabaseProxy
 
+from app.config import settings
 from app.services.cosmos import (
     BIRDS_CONTAINER,
     DECKS_CONTAINER,
@@ -145,9 +146,17 @@ def ensure_containers(db: DatabaseProxy | None = None) -> list[str]:
     Returns the list of container IDs that were checked/created.
     Safe to call repeatedly — ``create_container_if_not_exists`` is idempotent.
 
-    If the database proxy is operating under managed-identity (data-plane only),
-    container creation will be skipped and the function returns an empty list.
+    When running under managed identity (no ``COSMOS_KEY``), the SDK only has
+    data-plane access and cannot create containers.  In that case we skip
+    entirely — containers must already exist (created via IaC or CLI).
     """
+    if not settings.cosmos_key:
+        logger.info(
+            "Managed-identity mode — skipping container creation "
+            "(containers must already exist)"
+        )
+        return []
+
     if db is None:
         db = get_database()
 
