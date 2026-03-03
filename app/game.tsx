@@ -19,6 +19,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { colors, spacing, radii, typography } from "../src/theme";
 import { useGameStore } from "../src/stores/gameStore";
+import { useAuthStore } from "../src/stores/authStore";
+import { submitSession, type SessionCreatePayload } from "../src/api/birdieApi";
 import FlashCard from "../src/components/FlashCard";
 import ScoreBar from "../src/components/ScoreBar";
 import ResultsModal from "../src/components/ResultsModal";
@@ -50,6 +52,11 @@ export default function GameScreen() {
   const [chatBirdName, setChatBirdName] = useState<string | null>(null);
   const [wikiUrl, setWikiUrl] = useState<string | null>(null);
   const [wikiTitle, setWikiTitle] = useState<string>("");
+  const [sessionSubmitted, setSessionSubmitted] = useState(false);
+
+  // Auth state
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const sessionStartedAt = useGameStore((s) => s.sessionStartedAt);
 
   // ---- Derived ----
   const deckSize = birds.length;
@@ -142,11 +149,49 @@ export default function GameScreen() {
   const handleShowResults = useCallback(() => {
     markUnansweredAsSkipped();
     setShowResults(true);
-  }, [markUnansweredAsSkipped]);
+
+    // Auto-submit session for authenticated users
+    if (isAuthenticated() && !sessionSubmitted) {
+      setSessionSubmitted(true);
+      const now = new Date().toISOString();
+      const startedIso = sessionStartedAt
+        ? new Date(sessionStartedAt).toISOString()
+        : now;
+
+      // Map quiz mode to backend format
+      const quizModeMap: Record<string, SessionCreatePayload["quiz_mode"]> = {
+        "flashcard": "flashcard",
+        "multiple-choice": "multiple_choice",
+        "audio": "audio",
+      };
+      const gameQuizMode = useGameStore.getState().quizMode;
+      const quizMode = quizModeMap[gameQuizMode] ?? "flashcard";
+
+      const currentAnswers = useGameStore.getState().answers;
+      const payload: SessionCreatePayload = {
+        quiz_mode: quizMode,
+        started_at: startedIso,
+        completed_at: now,
+        region_code: filters.regionLabel ?? null,
+        difficulty: (filters.difficultyLabel?.toLowerCase() as SessionCreatePayload["difficulty"]) ?? null,
+        answers: currentAnswers.map((a) => ({
+          species_code: a.speciesCode,
+          result: a.result,
+          time_ms: a.timeMs,
+        })),
+      };
+
+      // Fire-and-forget — don't block UI on session submission
+      submitSession(payload).catch(() => {
+        // Session save failed silently — not critical
+      });
+    }
+  }, [markUnansweredAsSkipped, isAuthenticated, sessionSubmitted, sessionStartedAt, filters]);
 
   const handleResetGame = useCallback(() => {
     clearAnswers();
     setShowResults(false);
+    setSessionSubmitted(false);
   }, [clearAnswers]);
 
   const handleEndGame = useCallback(() => {

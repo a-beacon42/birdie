@@ -19,8 +19,9 @@ from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
-from app.routers import auth, birds, chat, regions
+from app.routers import auth, birds, chat, decks, regions, stats
 from app.services.cosmos import get_birds_container
+from app.services.cosmos_init import ensure_containers
 from app.services.chat_service import close_http_client as close_chat_client
 from app.services.ebird_service import close_http_client as close_ebird_client
 
@@ -154,6 +155,7 @@ async def lifespan(app: FastAPI):
 
     try:
         get_birds_container()
+        ensure_containers()
         logger.info("Cosmos DB connection initialised successfully")
     except Exception as e:
         logger.warning(
@@ -194,7 +196,9 @@ app.add_middleware(RequestLoggingMiddleware)
 _API_V1 = "/api/v1"
 app.include_router(auth.router, prefix=_API_V1)
 app.include_router(birds.router, prefix=_API_V1)
+app.include_router(decks.router, prefix=_API_V1)
 app.include_router(regions.router, prefix=_API_V1)
+app.include_router(stats.router, prefix=_API_V1)
 app.include_router(chat.router, prefix=_API_V1)
 
 

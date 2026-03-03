@@ -1,6 +1,5 @@
 """Tests for eBird service — caching, retries, and error handling."""
 
-import asyncio
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 

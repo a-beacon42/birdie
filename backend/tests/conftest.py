@@ -1,8 +1,5 @@
 """Conftest — shared fixtures for backend tests."""
 
-import os
-from unittest.mock import MagicMock, patch
-
 import pytest
 
 

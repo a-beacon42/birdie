@@ -46,7 +46,7 @@ async def subnational1(
     _validate_region_code(country_code, "Country code")
     try:
         return await get_subnational1_regions(country_code)
-    except Exception as exc:
+    except Exception:
         logger.exception("eBird subnational1 proxy error for %s", country_code)
         raise HTTPException(
             status_code=502, detail="Failed to fetch region data. Please try again."
@@ -63,7 +63,7 @@ async def subnational2(
     _validate_region_code(state_code, "State code")
     try:
         return await get_subnational2_regions(state_code)
-    except Exception as exc:
+    except Exception:
         logger.exception("eBird subnational2 proxy error for %s", state_code)
         raise HTTPException(
             status_code=502, detail="Failed to fetch region data. Please try again."
@@ -80,7 +80,7 @@ async def species_list(
     _validate_region_code(region_code, "Region code")
     try:
         return await get_species_list(region_code)
-    except Exception as exc:
+    except Exception:
         logger.exception("eBird species list proxy error for %s", region_code)
         raise HTTPException(
             status_code=502, detail="Failed to fetch species data. Please try again."
@@ -102,7 +102,7 @@ async def region_frequency(
     _validate_region_code(region_code, "Region code")
     try:
         return await get_region_frequency(region_code)
-    except Exception as exc:
+    except Exception:
         logger.exception("eBird frequency proxy error for %s", region_code)
         raise HTTPException(
             status_code=502, detail="Failed to fetch frequency data. Please try again."

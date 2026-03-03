@@ -21,6 +21,7 @@ import { colors, spacing, radii, typography, shadows } from "../src/theme";
 import { useFamilies, useSubnational1, useSubnational2 } from "../src/hooks/useApi";
 import { useGameStore } from "../src/stores/gameStore";
 import { usePreferencesStore } from "../src/stores/preferencesStore";
+import { useAuthStore } from "../src/stores/authStore";
 import { createDeck, getSpeciesList } from "../src/api/birdieApi";
 import type { Difficulty } from "../src/api/birdieApi";
 import type { BirdFamily, Region } from "../src/types/bird";
@@ -40,6 +41,7 @@ const DIFFICULTIES: { key: Difficulty | null; label: string }[] = [
 export default function HomeScreen() {
     const router = useRouter();
     const startGame = useGameStore((s) => s.startGame);
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
     // Persisted filter preferences
     const cardCount = usePreferencesStore((s) => s.cardCount);
@@ -145,7 +147,47 @@ export default function HomeScreen() {
                 {/* Header */}
                 <View style={styles.header}>
                     <Text style={styles.title}>birdie</Text>
-                    {/* <Text style={styles.subtitle}>Bird ID Flashcards</Text> */}
+                </View>
+
+                {/* Navigation bar */}
+                <View style={styles.navBar}>
+                    {isAuthenticated() ? (
+                        <>
+                            <Pressable
+                                style={styles.navButton}
+                                onPress={() => router.push("/decks")}
+                                accessibilityRole="button"
+                                accessibilityLabel="My saved decks"
+                            >
+                                <Text style={styles.navButtonText}>📚 Decks</Text>
+                            </Pressable>
+                            <Pressable
+                                style={styles.navButton}
+                                onPress={() => router.push("/stats")}
+                                accessibilityRole="button"
+                                accessibilityLabel="My stats"
+                            >
+                                <Text style={styles.navButtonText}>📊 Stats</Text>
+                            </Pressable>
+                            <Pressable
+                                style={styles.navButton}
+                                onPress={() => router.push("/profile")}
+                                accessibilityRole="button"
+                                accessibilityLabel="My profile"
+                            >
+                                <Text style={styles.navButtonText}>👤 Profile</Text>
+                            </Pressable>
+                        </>
+                    ) : (
+                        <Pressable
+                            style={styles.navButton}
+                            onPress={() => router.push("/login")}
+                            accessibilityRole="button"
+                            accessibilityLabel="Log in or sign up"
+                        >
+                            <Text style={styles.navButtonText}>Log In / Sign Up</Text>
+                        </Pressable>
+                    )}
                 </View>
 
                 {/* Card */}
@@ -296,7 +338,7 @@ const styles = StyleSheet.create({
     header: {
         alignItems: "center",
         paddingTop: spacing.xl,
-        paddingBottom: spacing.lg,
+        paddingBottom: spacing.sm,
     },
     title: {
         ...typography.h1,
@@ -307,6 +349,25 @@ const styles = StyleSheet.create({
         ...typography.body,
         color: colors.textSecondary,
         marginTop: spacing.xs,
+    },
+    navBar: {
+        flexDirection: "row",
+        justifyContent: "center",
+        gap: spacing.sm,
+        marginBottom: spacing.lg,
+    },
+    navButton: {
+        paddingVertical: spacing.xs,
+        paddingHorizontal: spacing.md,
+        borderRadius: radii.full,
+        borderWidth: 1.5,
+        borderColor: colors.primary + "40",
+        backgroundColor: colors.primary + "10",
+    },
+    navButtonText: {
+        ...typography.label,
+        color: colors.primary,
+        fontSize: 13,
     },
     card: {
         backgroundColor: colors.surface,

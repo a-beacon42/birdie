@@ -85,47 +85,64 @@ def get_birds_container() -> ContainerProxy:
     return _birds_container
 
 
-def _get_or_create_container(name: str, partition_path: str) -> ContainerProxy:
+def _get_or_create_container(
+    name: str,
+    partition_path: str,
+    indexing_policy: dict | None = None,
+) -> ContainerProxy:
     """Helper — get or create a Cosmos container by name and partition key path."""
     db = get_database()
     if settings.cosmos_key:
-        return db.create_container_if_not_exists(
-            id=name,
-            partition_key=PartitionKey(path=partition_path),
-        )
+        kwargs: dict = {
+            "id": name,
+            "partition_key": PartitionKey(path=partition_path),
+        }
+        if indexing_policy is not None:
+            kwargs["indexing_policy"] = indexing_policy
+        return db.create_container_if_not_exists(**kwargs)
     return db.get_container_client(name)
 
 
 def get_users_container() -> ContainerProxy:
     """Get (or create) the users container. Partition key: /id."""
+    from app.services.cosmos_init import USERS_INDEX_POLICY
+
     global _users_container
     if _users_container is not None:
         return _users_container
     with _lock:
         if _users_container is None:
-            _users_container = _get_or_create_container(USERS_CONTAINER, "/id")
+            _users_container = _get_or_create_container(
+                USERS_CONTAINER, "/id", indexing_policy=USERS_INDEX_POLICY
+            )
     return _users_container
 
 
 def get_decks_container() -> ContainerProxy:
     """Get (or create) the decks container. Partition key: /user_id."""
+    from app.services.cosmos_init import DECKS_INDEX_POLICY
+
     global _decks_container
     if _decks_container is not None:
         return _decks_container
     with _lock:
         if _decks_container is None:
-            _decks_container = _get_or_create_container(DECKS_CONTAINER, "/user_id")
+            _decks_container = _get_or_create_container(
+                DECKS_CONTAINER, "/user_id", indexing_policy=DECKS_INDEX_POLICY
+            )
     return _decks_container
 
 
 def get_sessions_container() -> ContainerProxy:
     """Get (or create) the game_sessions container. Partition key: /user_id."""
+    from app.services.cosmos_init import SESSIONS_INDEX_POLICY
+
     global _sessions_container
     if _sessions_container is not None:
         return _sessions_container
     with _lock:
         if _sessions_container is None:
             _sessions_container = _get_or_create_container(
-                SESSIONS_CONTAINER, "/user_id"
+                SESSIONS_CONTAINER, "/user_id", indexing_policy=SESSIONS_INDEX_POLICY
             )
     return _sessions_container

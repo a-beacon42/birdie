@@ -1,6 +1,5 @@
 """Tests for API authentication, token issuance, and security."""
 
-import secrets
 import time
 from unittest.mock import patch, MagicMock
 
@@ -17,16 +16,14 @@ def client():
 
     test_settings = Settings()
 
-    with patch("app.routers.chat.settings", test_settings), patch(
-        "app.routers.auth.settings", test_settings
-    ), patch("app.routers.birds.settings", test_settings), patch(
-        "app.routers.regions.settings", test_settings
-    ), patch(
-        "app.main.settings", test_settings
-    ), patch(
-        "app.services.cosmos.get_birds_container"
-    ) as mock_container:
-
+    with (
+        patch("app.routers.chat.settings", test_settings),
+        patch("app.routers.auth.settings", test_settings),
+        patch("app.routers.birds.settings", test_settings),
+        patch("app.routers.regions.settings", test_settings),
+        patch("app.main.settings", test_settings),
+        patch("app.services.cosmos.get_birds_container") as mock_container,
+    ):
         # Mock the Cosmos container
         mock_container.return_value = MagicMock()
 

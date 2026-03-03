@@ -20,6 +20,12 @@ import { initSentry } from "../src/utils/sentry";
 // Initialise Sentry as early as possible
 initSentry();
 
+const stackScreenOptions = {
+    headerShown: false,
+    contentStyle: { backgroundColor: colors.background },
+    animation: "slide_from_right" as const,
+};
+
 export default function RootLayout() {
     const { isConnected } = useNetworkStatus();
 
@@ -29,13 +35,15 @@ export default function RootLayout() {
                 <SafeAreaProvider>
                     <StatusBar style="dark" />
                     {!isConnected && <OfflineBanner />}
-                    <Stack
-                        screenOptions={{
-                            headerShown: false,
-                            contentStyle: { backgroundColor: colors.background },
-                            animation: "slide_from_right",
-                        }}
-                    />
+                    <Stack screenOptions={stackScreenOptions}>
+                        <Stack.Screen name="index" />
+                        <Stack.Screen name="game" />
+                        <Stack.Screen name="login" />
+                        <Stack.Screen name="register" />
+                        <Stack.Screen name="profile" />
+                        <Stack.Screen name="decks" />
+                        <Stack.Screen name="stats" />
+                    </Stack>
                 </SafeAreaProvider>
             </GestureHandlerRootView>
         </ErrorBoundary>

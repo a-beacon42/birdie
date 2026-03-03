@@ -13,6 +13,7 @@ import base64
 import hashlib
 import logging
 import os
+from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -24,7 +25,7 @@ from azure.cosmos.exceptions import (
 )
 
 from app.config import settings
-from app.models.user import User, UserResponse
+from app.models.user import UserResponse
 from app.services.cosmos import (
     get_users_container,
     get_decks_container,
@@ -34,36 +35,31 @@ from app.services.cosmos import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-#  Common password list (top ~30 most common — lightweight inline check)
+#  Common password list — loaded from 10 000-entry file at import time
 # ---------------------------------------------------------------------------
-_COMMON_PASSWORDS = frozenset(
-    [
-        "password123",
-        "123456789a",
-        "qwerty12345",
-        "letmein1234",
-        "iloveyou123",
-        "welcome1234",
-        "monkey12345",
-        "dragon12345",
-        "master12345",
-        "football123",
-        "baseball123",
-        "shadow12345",
-        "trustno1234",
-        "michael1234",
-        "jennifer123",
-        "1234567890a",
-        "abcdefghij1",
-        "password1234",
-        "qwertyuiop1",
-        "admin1234567",
-        "changeme1234",
-        "password12345",
-        "p@ssword1234",
-        "passw0rd1234",
-    ]
+_PASSWORDS_FILE = (
+    Path(__file__).resolve().parent.parent / "data" / "common_passwords.txt"
 )
+
+
+def _load_common_passwords() -> frozenset[str]:
+    """Load the common-passwords file into an immutable set (case-insensitive)."""
+    try:
+        with open(_PASSWORDS_FILE, encoding="utf-8") as fh:
+            passwords = frozenset(line.strip().lower() for line in fh if line.strip())
+        logger.info(
+            "Loaded %d common passwords from %s", len(passwords), _PASSWORDS_FILE.name
+        )
+        return passwords
+    except FileNotFoundError:
+        logger.warning(
+            "Common passwords file not found at %s — falling back to empty set",
+            _PASSWORDS_FILE,
+        )
+        return frozenset()
+
+
+_COMMON_PASSWORDS: frozenset[str] = _load_common_passwords()
 
 # ---------------------------------------------------------------------------
 #  Email encryption helpers (AES-256-GCM)
@@ -334,7 +330,12 @@ def delete_user(user_id: str, password: str) -> None:
 
     # --- Delete user document ---
     container.delete_item(item=user_id, partition_key=user_id)
-    logger.info("User deleted (cascade complete): %s", user_id[:12])
+    logger.info(
+        "User deleted (cascade complete): %s — removed %d deck(s) and %d session(s)",
+        user_id[:12],
+        len(decks),
+        len(sessions),
+    )
 
 
 def get_user(user_id: str) -> dict | None:
