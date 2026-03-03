@@ -21,6 +21,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 from app.routers import auth, birds, chat, decks, regions, stats
 from app.services.cosmos import get_birds_container
+from app.services.cosmos_init import ensure_containers
 from app.services.chat_service import close_http_client as close_chat_client
 from app.services.ebird_service import close_http_client as close_ebird_client
 
@@ -154,6 +155,7 @@ async def lifespan(app: FastAPI):
 
     try:
         get_birds_container()
+        ensure_containers()
         logger.info("Cosmos DB connection initialised successfully")
     except Exception as e:
         logger.warning(
