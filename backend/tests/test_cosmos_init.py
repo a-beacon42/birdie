@@ -164,6 +164,13 @@ class TestSessionsIndexPolicy:
 
 
 class TestEnsureContainers:
+    @pytest.fixture(autouse=True)
+    def _ensure_cosmos_key(self, monkeypatch):
+        """Ensure settings.cosmos_key is truthy so ensure_containers() runs."""
+        from app.config import settings
+
+        monkeypatch.setattr(settings, "cosmos_key", "fake-key==")
+
     @patch("app.services.cosmos_init.get_database")
     def test_creates_all_three_containers(self, mock_get_db):
         mock_db = MagicMock()
@@ -244,8 +251,6 @@ class TestEnsureContainers:
     @patch("app.services.cosmos_init.get_database")
     def test_skips_creation_under_managed_identity(self, mock_get_db, monkeypatch):
         """When COSMOS_KEY is empty (managed identity), skip container creation."""
-        monkeypatch.setenv("COSMOS_KEY", "")
-        # Force settings to reload the empty key
         from app.config import settings
 
         monkeypatch.setattr(settings, "cosmos_key", "")
