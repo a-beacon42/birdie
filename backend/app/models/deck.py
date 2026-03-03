@@ -1,10 +1,44 @@
 """Pydantic models for saved game decks."""
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
 from app.services.difficulty_service import Difficulty
+
+# Reject control characters (except space/tab/newline), HTML-like tags, and
+# common script-injection patterns.  Only printable Unicode (letters, digits,
+# punctuation, spaces) is allowed.
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+_HTML_TAG_RE = re.compile(r"<[^>]+>", re.IGNORECASE)
+_SCRIPT_PATTERN_RE = re.compile(r"(?:javascript|vbscript|data)\s*:", re.IGNORECASE)
+
+
+def _sanitise_deck_name(v: str) -> str:
+    """Collapse whitespace, reject control chars / HTML / script patterns."""
+    v = " ".join(v.split()).strip()
+    if not v:
+        raise ValueError("Deck name must not be blank")
+    if _CONTROL_CHARS_RE.search(v):
+        raise ValueError("Deck name contains invalid control characters")
+    if _HTML_TAG_RE.search(v):
+        raise ValueError("Deck name must not contain HTML tags")
+    if _SCRIPT_PATTERN_RE.search(v):
+        raise ValueError("Deck name contains a disallowed pattern")
+    return v
+
+
+def _validate_species_list(v: list[str] | None) -> list[str] | None:
+    """Shared species-codes validator for create and update models."""
+    if v is not None:
+        if len(v) > 500:
+            raise ValueError("A frozen deck can contain at most 500 species")
+        pattern = re.compile(r"^[a-zA-Z0-9]{1,10}$")
+        for code in v:
+            if not pattern.match(code):
+                raise ValueError(f"Invalid species code: {code!r}")
+    return v
 
 
 class DeckFilters(BaseModel):
@@ -50,21 +84,12 @@ class DeckCreateRequest(BaseModel):
     @field_validator("name")
     @classmethod
     def sanitise_name(cls, v: str) -> str:
-        return " ".join(v.split()).strip()
+        return _sanitise_deck_name(v)
 
     @field_validator("species_codes")
     @classmethod
     def validate_species_codes(cls, v: list[str] | None) -> list[str] | None:
-        if v is not None:
-            if len(v) > 500:
-                raise ValueError("A frozen deck can contain at most 500 species")
-            import re
-
-            pattern = re.compile(r"^[a-zA-Z0-9]{1,10}$")
-            for code in v:
-                if not pattern.match(code):
-                    raise ValueError(f"Invalid species code: {code!r}")
-        return v
+        return _validate_species_list(v)
 
 
 class DeckUpdateRequest(BaseModel):
@@ -79,22 +104,13 @@ class DeckUpdateRequest(BaseModel):
     @classmethod
     def sanitise_name(cls, v: str | None) -> str | None:
         if v is not None:
-            return " ".join(v.split()).strip()
+            return _sanitise_deck_name(v)
         return v
 
     @field_validator("species_codes")
     @classmethod
     def validate_species_codes(cls, v: list[str] | None) -> list[str] | None:
-        if v is not None:
-            if len(v) > 500:
-                raise ValueError("A frozen deck can contain at most 500 species")
-            import re
-
-            pattern = re.compile(r"^[a-zA-Z0-9]{1,10}$")
-            for code in v:
-                if not pattern.match(code):
-                    raise ValueError(f"Invalid species code: {code!r}")
-        return v
+        return _validate_species_list(v)
 
 
 class DeckResponse(BaseModel):

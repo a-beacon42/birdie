@@ -90,10 +90,13 @@ class PasswordChangeRequest(BaseModel):
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, v: str) -> str:
+        if len(v) < 10:
+            raise ValueError("Password must be at least 10 characters")
         has_letter = any(c.isalpha() for c in v)
         has_digit = any(c.isdigit() for c in v)
         if not (has_letter and has_digit):
             raise ValueError("Password must contain at least one letter and one digit")
+        # Defer common-password check to service layer (avoids circular import)
         return v
 
 
