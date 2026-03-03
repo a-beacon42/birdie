@@ -81,9 +81,10 @@ class TestUsersIndexPolicy:
     def test_automatic_is_true(self):
         assert USERS_INDEX_POLICY["automatic"] is True
 
-    def test_includes_id_path(self):
+    def test_id_not_in_included_paths(self):
+        """/id is a system property — always indexed, must NOT be in includedPaths."""
         included = [p["path"] for p in USERS_INDEX_POLICY["includedPaths"]]
-        assert "/id/?" in included
+        assert "/id/?" not in included
 
     def test_includes_is_active_path(self):
         included = [p["path"] for p in USERS_INDEX_POLICY["includedPaths"]]

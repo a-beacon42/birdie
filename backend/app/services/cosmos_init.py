@@ -41,12 +41,11 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # Users container — point-reads by id, rarely queried.
-# Include only /id and /is_active; exclude everything else.
+# /id is a system property (always indexed); only add /is_active explicitly.
 USERS_INDEX_POLICY = {
     "indexingMode": "consistent",
     "automatic": True,
     "includedPaths": [
-        {"path": "/id/?"},
         {"path": "/is_active/?"},
     ],
     "excludedPaths": [
