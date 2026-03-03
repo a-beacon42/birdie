@@ -10,6 +10,8 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Difficulty } from "../api/birdieApi";
 
+type ColorScheme = "light" | "dark";
+
 interface PreferencesState {
     cardCount: number;
     selectedFamily: string;
@@ -17,6 +19,7 @@ interface PreferencesState {
     selectedState: string;
     selectedCounty: string;
     selectedDifficulty: Difficulty | null;
+    colorScheme: ColorScheme;
 
     setCardCount: (count: number) => void;
     setSelectedFamily: (family: string) => void;
@@ -24,6 +27,7 @@ interface PreferencesState {
     setSelectedState: (state: string) => void;
     setSelectedCounty: (county: string) => void;
     setSelectedDifficulty: (difficulty: Difficulty | null) => void;
+    setColorScheme: (scheme: ColorScheme) => void;
     clearAll: () => void;
 }
 
@@ -34,6 +38,7 @@ const DEFAULT_STATE = {
     selectedState: "",
     selectedCounty: "",
     selectedDifficulty: null as Difficulty | null,
+    colorScheme: "light" as ColorScheme,
 };
 
 export const usePreferencesStore = create<PreferencesState>()(
@@ -49,6 +54,7 @@ export const usePreferencesStore = create<PreferencesState>()(
                 set({ selectedState, selectedCounty: "" }),
             setSelectedCounty: (selectedCounty) => set({ selectedCounty }),
             setSelectedDifficulty: (selectedDifficulty) => set({ selectedDifficulty }),
+            setColorScheme: (colorScheme) => set({ colorScheme }),
             clearAll: () => set(DEFAULT_STATE),
         }),
         {
@@ -62,6 +68,7 @@ export const usePreferencesStore = create<PreferencesState>()(
                 selectedState: state.selectedState,
                 selectedCounty: state.selectedCounty,
                 selectedDifficulty: state.selectedDifficulty,
+                colorScheme: state.colorScheme,
             }),
         },
     ),

@@ -40,6 +40,7 @@ describe("preferencesStore", () => {
             selectedState: "",
             selectedCounty: "",
             selectedDifficulty: null,
+            colorScheme: "light",
         });
     });
 
