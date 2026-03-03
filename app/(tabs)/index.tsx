@@ -1,22 +1,107 @@
 /**
- * Home tab — landing page with branding and quick navigation.
+ * Home tab — dashboard with live stats and saved decks.
  *
- * Shows Decks/Stats shortcuts when authenticated, or a sign-up
- * prompt for anonymous users.
+ * Authenticated users see a stats summary and their most recent saved
+ * decks with inline play buttons. Anonymous users see a sign-up CTA.
  */
 
-import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import React, { useState, useCallback, useEffect } from "react";
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    Pressable,
+    ActivityIndicator,
+    RefreshControl,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radii, typography, shadows } from "../../src/theme";
 import { useAuthStore } from "../../src/stores/authStore";
+import { useGameStore } from "../../src/stores/gameStore";
+import {
+    fetchOverview,
+    fetchSavedDecks,
+    playSavedDeck,
+    type OverviewStats,
+    type SavedDeckSummary,
+} from "../../src/api/birdieApi";
+import { showAlert } from "../../src/utils/alert";
+
+/** How many saved decks to show on the home screen before "See all". */
+const MAX_DECKS_SHOWN = 3;
 
 export default function HomeScreen() {
     const router = useRouter();
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const user = useAuthStore((s) => s.user);
+    const startGame = useGameStore((s) => s.startGame);
+
+    const [overview, setOverview] = useState<OverviewStats | null>(null);
+    const [decks, setDecks] = useState<SavedDeckSummary[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [playingId, setPlayingId] = useState<string | null>(null);
+
+    const loadData = useCallback(async () => {
+        try {
+            const [ov, dk] = await Promise.all([
+                fetchOverview(),
+                fetchSavedDecks(),
+            ]);
+            setOverview(ov);
+            setDecks(dk);
+        } catch (err: unknown) {
+            showAlert(
+                "Error",
+                err instanceof Error ? err.message : "Failed to load home data",
+            );
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (isAuthenticated()) {
+            loadData();
+        } else {
+            setLoading(false);
+        }
+    }, [isAuthenticated, loadData]);
+
+    const handleRefresh = useCallback(() => {
+        setRefreshing(true);
+        loadData();
+    }, [loadData]);
+
+    const handlePlay = useCallback(
+        async (deck: SavedDeckSummary) => {
+            setPlayingId(deck.id);
+            try {
+                const birds = await playSavedDeck(deck.id);
+                if (birds.length === 0) {
+                    showAlert(
+                        "Empty deck",
+                        "No birds found for this deck configuration.",
+                    );
+                    return;
+                }
+                startGame(birds, "flashcard", {});
+                router.push("/game");
+            } catch (err: unknown) {
+                showAlert(
+                    "Error",
+                    err instanceof Error ? err.message : "Failed to load deck",
+                );
+            } finally {
+                setPlayingId(null);
+            }
+        },
+        [startGame, router],
+    );
 
     const memberSince = user
         ? new Date(user.created_at).toLocaleDateString(undefined, {
@@ -25,66 +110,110 @@ export default function HomeScreen() {
         })
         : null;
 
+    const visibleDecks = decks.slice(0, MAX_DECKS_SHOWN);
+    const hasMoreDecks = decks.length > MAX_DECKS_SHOWN;
+
     return (
         <SafeAreaView style={styles.safeArea} edges={["top"]}>
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    isAuthenticated() ? (
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={handleRefresh}
+                        />
+                    ) : undefined
+                }
             >
                 {/* Header */}
                 <View style={styles.header}>
                     <Text style={styles.title}>birdie</Text>
-                    <Text style={styles.subtitle}>Learn to identify birds</Text>
+                    {memberSince && (
+                        <Text style={styles.subtitle}>
+                            Member since {memberSince}
+                        </Text>
+                    )}
+                    {!isAuthenticated() && (
+                        <Text style={styles.subtitle}>
+                            Learn to identify birds
+                        </Text>
+                    )}
                 </View>
 
-                {/* Authenticated: quick-access cards */}
+                {/* ── Authenticated dashboard ────────────────────────── */}
                 {isAuthenticated() && (
                     <>
-                        <View style={styles.cardsRow}>
-                            <Pressable
-                                style={styles.linkCard}
-                                onPress={() => router.push("/decks")}
-                                accessibilityRole="button"
-                                accessibilityLabel="My saved decks"
-                            >
-                                <Ionicons name="albums-outline" size={28} color={colors.primary} />
-                                <Text style={styles.linkCardTitle}>Decks</Text>
-                                <Text style={styles.linkCardDesc}>Your saved decks</Text>
-                            </Pressable>
-                            <Pressable
-                                style={styles.linkCard}
-                                onPress={() => router.push("/stats")}
-                                accessibilityRole="button"
-                                accessibilityLabel="My stats"
-                            >
-                                <Ionicons name="bar-chart-outline" size={28} color={colors.primary} />
-                                <Text style={styles.linkCardTitle}>Stats</Text>
-                                <Text style={styles.linkCardDesc}>Track your progress</Text>
-                            </Pressable>
-                        </View>
+                        {loading ? (
+                            <ActivityIndicator
+                                color={colors.primary}
+                                size="large"
+                                style={{ marginVertical: spacing.xl }}
+                            />
+                        ) : (
+                            <>
+                                {/* Stats summary */}
+                                {overview && <StatsCard overview={overview} onSeeAll={() => router.push("/stats")} />}
 
-                        <View style={styles.welcomeCard}>
-                            <Text style={styles.welcomeText}>
-                                Ready to play? Head to the{" "}
-                                <Text style={styles.welcomeLink}>New Game</Text> tab to
-                                start a round.
-                            </Text>
-                            {memberSince && (
-                                <Text style={styles.memberSince}>
-                                    Member since {memberSince}
-                                </Text>
-                            )}
-                        </View>
+                                {/* Saved decks */}
+                                <View style={styles.sectionHeader}>
+                                    <Text style={styles.sectionTitle}>Saved Decks</Text>
+                                    <Pressable
+                                        onPress={() => router.push("/decks")}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="See all decks"
+                                    >
+                                        <Text style={styles.seeAll}>See all</Text>
+                                    </Pressable>
+                                </View>
+
+                                {visibleDecks.length === 0 ? (
+                                    <View style={styles.emptyCard}>
+                                        <Ionicons
+                                            name="albums-outline"
+                                            size={32}
+                                            color={colors.textMuted}
+                                        />
+                                        <Text style={styles.emptyText}>
+                                            No saved decks yet. Play a game and save it
+                                            from the results screen!
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    visibleDecks.map((deck) => (
+                                        <DeckRow
+                                            key={deck.id}
+                                            deck={deck}
+                                            playing={playingId === deck.id}
+                                            onPlay={() => handlePlay(deck)}
+                                        />
+                                    ))
+                                )}
+
+                                {hasMoreDecks && (
+                                    <Pressable
+                                        style={styles.seeAllButton}
+                                        onPress={() => router.push("/decks")}
+                                        accessibilityRole="button"
+                                    >
+                                        <Text style={styles.seeAllButtonText}>
+                                            View all {decks.length} decks
+                                        </Text>
+                                    </Pressable>
+                                )}
+                            </>
+                        )}
                     </>
                 )}
 
-                {/* Anonymous: sign-up CTA */}
+                {/* ── Anonymous CTA ──────────────────────────────────── */}
                 {!isAuthenticated() && (
                     <View style={styles.ctaCard}>
                         <Text style={styles.ctaTitle}>Welcome to Birdie!</Text>
                         <Text style={styles.ctaText}>
-                            Create an account to save decks, track your stats, and more.
-                            Or jump straight into a game from the New Game tab.
+                            Create an account to save decks, track your stats, and
+                            more. Or jump straight into a game from the New Game tab.
                         </Text>
                         <View style={styles.ctaButtons}>
                             <Pressable
@@ -109,6 +238,152 @@ export default function HomeScreen() {
     );
 }
 
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  Stats summary card                                                       */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function StatsCard({
+    overview,
+    onSeeAll,
+}: {
+    overview: OverviewStats;
+    onSeeAll: () => void;
+}) {
+    const accuracyDeltaSign = overview.accuracy_delta_week >= 0 ? "+" : "";
+    const accuracyDeltaColor =
+        overview.accuracy_delta_week >= 0 ? colors.success : colors.error;
+
+    return (
+        <View style={styles.statsCard}>
+            <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Your Stats</Text>
+                <Pressable
+                    onPress={onSeeAll}
+                    accessibilityRole="button"
+                    accessibilityLabel="See all stats"
+                >
+                    <Text style={styles.seeAll}>See all</Text>
+                </Pressable>
+            </View>
+
+            {/* Top row — big numbers */}
+            <View style={styles.statsRow}>
+                <StatTile
+                    label="Life List"
+                    value={overview.life_list_count.toString()}
+                    sub={`${overview.life_list_pct.toFixed(0)}%`}
+                />
+                <StatTile
+                    label="Accuracy"
+                    value={`${overview.overall_accuracy.toFixed(0)}%`}
+                    sub={`${accuracyDeltaSign}${overview.accuracy_delta_week.toFixed(1)}% this week`}
+                    subColor={accuracyDeltaColor}
+                />
+            </View>
+
+            {/* Bottom row — secondary stats */}
+            <View style={styles.statsRow}>
+                <StatTile
+                    label="Games"
+                    value={overview.total_sessions.toString()}
+                    sub={`${overview.games_this_week} this week`}
+                />
+                <StatTile
+                    label="Streak"
+                    value={`${overview.daily_practice_streak}d`}
+                    sub={`Best: ${overview.longest_streak}d`}
+                />
+            </View>
+        </View>
+    );
+}
+
+function StatTile({
+    label,
+    value,
+    sub,
+    subColor,
+}: {
+    label: string;
+    value: string;
+    sub?: string;
+    subColor?: string;
+}) {
+    return (
+        <View style={styles.statTile}>
+            <Text style={styles.statValue}>{value}</Text>
+            <Text style={styles.statLabel}>{label}</Text>
+            {sub && (
+                <Text
+                    style={[
+                        styles.statSub,
+                        subColor ? { color: subColor } : undefined,
+                    ]}
+                >
+                    {sub}
+                </Text>
+            )}
+        </View>
+    );
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  Deck row                                                                 */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function DeckRow({
+    deck,
+    playing,
+    onPlay,
+}: {
+    deck: SavedDeckSummary;
+    playing: boolean;
+    onPlay: () => void;
+}) {
+    const filterParts: string[] = [];
+    if (deck.filters?.region_code) filterParts.push(deck.filters.region_code);
+    if (deck.filters?.difficulty) filterParts.push(deck.filters.difficulty);
+    if (deck.filters?.family) filterParts.push(deck.filters.family);
+    const meta = [
+        deck.species_count != null ? `${deck.species_count} species` : null,
+        ...filterParts,
+    ]
+        .filter(Boolean)
+        .join(" · ");
+
+    return (
+        <View style={styles.deckRow}>
+            <View style={styles.deckInfo}>
+                <Text style={styles.deckName} numberOfLines={1}>
+                    {deck.name}
+                </Text>
+                {meta ? (
+                    <Text style={styles.deckMeta} numberOfLines={1}>
+                        {meta}
+                    </Text>
+                ) : null}
+            </View>
+            <Pressable
+                style={[styles.playBtn, playing && styles.playBtnDisabled]}
+                onPress={onPlay}
+                disabled={playing}
+                accessibilityRole="button"
+                accessibilityLabel={`Play ${deck.name}`}
+            >
+                {playing ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                    <Ionicons name="play" size={16} color="#fff" />
+                )}
+            </Pressable>
+        </View>
+    );
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  Styles                                                                   */
+/* ────────────────────────────────────────────────────────────────────────── */
+
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
     scrollContent: {
@@ -126,54 +401,124 @@ const styles = StyleSheet.create({
         fontSize: 36,
     },
     subtitle: {
-        ...typography.body,
+        ...typography.bodySmall,
         color: colors.textSecondary,
         marginTop: spacing.xs,
     },
-    cardsRow: {
+
+    /* Section header (stats / decks) */
+    sectionHeader: {
         flexDirection: "row",
-        gap: spacing.md,
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: spacing.sm,
+    },
+    sectionTitle: {
+        ...typography.h3,
+        color: colors.text,
+    },
+    seeAll: {
+        ...typography.label,
+        color: colors.primary,
+    },
+
+    /* Stats card */
+    statsCard: {
+        backgroundColor: colors.surface,
+        borderRadius: radii.lg,
+        padding: spacing.lg,
+        marginBottom: spacing.lg,
+        ...shadows.sm,
+    },
+    statsRow: {
+        flexDirection: "row",
+        gap: spacing.sm,
+        marginTop: spacing.md,
+    },
+    statTile: {
+        flex: 1,
+        backgroundColor: colors.background,
+        borderRadius: radii.md,
+        padding: spacing.md,
+        alignItems: "center",
+    },
+    statValue: {
+        ...typography.h2,
+        color: colors.primary,
+    },
+    statLabel: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    statSub: {
+        ...typography.caption,
+        color: colors.textMuted,
+        marginTop: 2,
+    },
+
+    /* Deck rows */
+    deckRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.surface,
+        borderRadius: radii.md,
+        padding: spacing.md,
+        marginBottom: spacing.sm,
+        ...shadows.sm,
+    },
+    deckInfo: {
+        flex: 1,
+        marginRight: spacing.sm,
+    },
+    deckName: {
+        ...typography.label,
+        color: colors.text,
+        fontSize: 15,
+    },
+    deckMeta: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    playBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: radii.full,
+        backgroundColor: colors.primary,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    playBtnDisabled: {
+        opacity: 0.5,
+    },
+    seeAllButton: {
+        alignItems: "center",
+        paddingVertical: spacing.sm,
         marginBottom: spacing.lg,
     },
-    linkCard: {
-        flex: 1,
+    seeAllButtonText: {
+        ...typography.label,
+        color: colors.primary,
+    },
+
+    /* Empty state */
+    emptyCard: {
         backgroundColor: colors.surface,
         borderRadius: radii.lg,
         padding: spacing.lg,
         alignItems: "center",
-        gap: spacing.xs,
-        ...shadows.md,
-    },
-    linkCardTitle: {
-        ...typography.h3,
-        color: colors.text,
-    },
-    linkCardDesc: {
-        ...typography.caption,
-        color: colors.textSecondary,
-        textAlign: "center",
-    },
-    welcomeCard: {
-        backgroundColor: colors.surface,
-        borderRadius: radii.lg,
-        padding: spacing.lg,
+        gap: spacing.sm,
+        marginBottom: spacing.lg,
         ...shadows.sm,
     },
-    welcomeText: {
+    emptyText: {
         ...typography.body,
         color: colors.textSecondary,
         textAlign: "center",
     },
-    welcomeLink: {
-        color: colors.primary,
-        fontWeight: "600",
-    },
-    memberSince: {
-        ...typography.caption,
-        color: colors.textMuted,
-        textAlign: "center",
-        marginTop: spacing.sm,
-    },
+
+    /* Anonymous CTA */
     ctaCard: {
         backgroundColor: colors.surface,
         borderRadius: radii.lg,
