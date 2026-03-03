@@ -240,3 +240,17 @@ class TestEnsureContainers:
 
         assert result1 == result2
         assert mock_db.create_container_if_not_exists.call_count == 6  # 3 + 3
+
+    @patch("app.services.cosmos_init.get_database")
+    def test_skips_creation_under_managed_identity(self, mock_get_db, monkeypatch):
+        """When COSMOS_KEY is empty (managed identity), skip container creation."""
+        monkeypatch.setenv("COSMOS_KEY", "")
+        # Force settings to reload the empty key
+        from app.config import settings
+
+        monkeypatch.setattr(settings, "cosmos_key", "")
+
+        result = ensure_containers()
+
+        assert result == []
+        mock_get_db.assert_not_called()
