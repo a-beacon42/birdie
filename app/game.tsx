@@ -103,18 +103,6 @@ export default function GameScreen() {
     [birds, deckSize, answeredCodes],
   );
 
-  // ---- Auto-advance past answered cards ----
-  useEffect(() => {
-    if (currentBird && answeredCodes.has(currentBird.species_code)) {
-      if (allAnswered) {
-        if (!showResults) setShowResults(true);
-      } else {
-        const next = findUnanswered(currentIndex, 1);
-        if (next !== -1) goToIndex(next);
-      }
-    }
-  }, [currentBird, answeredCodes, allAnswered, showResults, currentIndex, findUnanswered, goToIndex]);
-
   // ---- Per-card timer (resets when displayed bird changes) ----
   const cardStartTime = useRef(Date.now());
 
@@ -182,11 +170,24 @@ export default function GameScreen() {
       };
 
       // Fire-and-forget — don't block UI on session submission
-      submitSession(payload).catch(() => {
-        // Session save failed silently — not critical
+      submitSession(payload).catch((err) => {
+        console.warn("Session save failed:", err);
       });
     }
   }, [markUnansweredAsSkipped, isAuthenticated, sessionSubmitted, sessionStartedAt, filters]);
+
+  // ---- Auto-advance past answered cards ----
+  useEffect(() => {
+    if (currentBird && answeredCodes.has(currentBird.species_code)) {
+      if (allAnswered) {
+        // Use handleShowResults so the session is submitted (not just setShowResults)
+        if (!showResults) handleShowResults();
+      } else {
+        const next = findUnanswered(currentIndex, 1);
+        if (next !== -1) goToIndex(next);
+      }
+    }
+  }, [currentBird, answeredCodes, allAnswered, showResults, currentIndex, findUnanswered, goToIndex, handleShowResults]);
 
   const handleResetGame = useCallback(() => {
     clearAnswers();

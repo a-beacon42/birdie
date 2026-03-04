@@ -136,9 +136,7 @@ async def create_deck(request: Request, req: DeckRequest) -> list[BirdSummary]:
         try:
             species_codes = await get_species_list(req.region_code)
         except Exception:
-            logger.warning(
-                "eBird species list fetch failed for %s", req.region_code
-            )
+            logger.warning("eBird species list fetch failed for %s", req.region_code)
 
     # Run sync Cosmos query in threadpool to avoid blocking the event loop
     loop = asyncio.get_event_loop()

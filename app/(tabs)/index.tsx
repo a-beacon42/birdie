@@ -5,7 +5,7 @@
  * decks with inline play buttons. Anonymous users see a sign-up CTA.
  */
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
     View,
     Text,
@@ -16,6 +16,7 @@ import {
     RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radii, typography, shadows } from "../../src/theme";
@@ -66,13 +67,16 @@ export default function HomeScreen() {
         }
     }, []);
 
-    useEffect(() => {
-        if (loggedIn) {
-            loadData();
-        } else {
-            setLoading(false);
-        }
-    }, [loggedIn, loadData]);
+    // Re-fetch stats every time the tab gains focus (e.g. after finishing a game)
+    useFocusEffect(
+        useCallback(() => {
+            if (loggedIn) {
+                loadData();
+            } else {
+                setLoading(false);
+            }
+        }, [loggedIn, loadData]),
+    );
 
     const handleRefresh = useCallback(() => {
         setRefreshing(true);

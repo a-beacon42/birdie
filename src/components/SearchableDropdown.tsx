@@ -50,6 +50,8 @@ export interface SearchableDropdownProps<T> {
     value: T[keyof T] | null;
     /** Called when the user selects an item */
     onChange: (item: T) => void;
+    /** Called when the user taps the clear button. When provided and a value is selected, a × button is shown. */
+    onClear?: () => void;
     /** Whether to show the search input (default true) */
     search?: boolean;
     /** Placeholder for the search input */
@@ -73,6 +75,7 @@ function SearchableDropdownInner<T>(props: SearchableDropdownProps<T>) {
         placeholder = "Select…",
         value,
         onChange,
+        onClear,
         search = true,
         searchPlaceholder = "Search…",
         maxHeight = 300,
@@ -251,7 +254,22 @@ function SearchableDropdownInner<T>(props: SearchableDropdownProps<T>) {
                 >
                     {visible ? "…" : displayText}
                 </Text>
-                <Text style={styles.chevron}>{visible ? "▲" : "▼"}</Text>
+                {onClear && selectedItem && !visible ? (
+                    <Pressable
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            onClear();
+                        }}
+                        hitSlop={8}
+                        style={styles.clearButton}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Clear ${label}`}
+                    >
+                        <Text style={styles.clearButtonText}>✕</Text>
+                    </Pressable>
+                ) : (
+                    <Text style={styles.chevron}>{visible ? "▲" : "▼"}</Text>
+                )}
             </Pressable>
 
             {/* Overlay */}
@@ -368,6 +386,20 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: colors.textSecondary,
         marginLeft: 8,
+    },
+    clearButton: {
+        marginLeft: 8,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: colors.border,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    clearButtonText: {
+        fontSize: 13,
+        color: colors.textSecondary,
+        fontWeight: "600",
     },
 
     /* overlay */
