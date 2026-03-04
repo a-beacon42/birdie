@@ -141,19 +141,19 @@ const ResultsModal: React.FC<ResultsModalProps> = ({
                             <Pressable
                                 ref={primaryBtnRef}
                                 style={[styles.button, styles.buttonPrimary]}
-                                onPress={onEndGame}
+                                onPress={onResetGame}
                                 accessibilityRole="button"
-                                accessibilityLabel="Start a new game"
+                                accessibilityLabel="Play the same deck again"
                             >
-                                <Text style={styles.buttonPrimaryText}>New Game</Text>
+                                <Text style={styles.buttonPrimaryText}>Play Again</Text>
                             </Pressable>
                             <Pressable
                                 style={[styles.button, styles.buttonSecondary]}
-                                onPress={onResetGame}
+                                onPress={onEndGame}
                                 accessibilityRole="button"
-                                accessibilityLabel="Reset and replay the same deck"
+                                accessibilityLabel="Return to home screen"
                             >
-                                <Text style={styles.buttonSecondaryText}>Reset Game</Text>
+                                <Text style={styles.buttonSecondaryText}>Home</Text>
                             </Pressable>
                         </View>
 

@@ -216,6 +216,7 @@ export default function NewGameScreen() {
                             placeholder="All families"
                             value={selectedFamily}
                             onChange={(item) => setSelectedFamily(item.family_code)}
+                            onClear={() => setSelectedFamily("")}
                         />
                     )}
 
@@ -229,6 +230,9 @@ export default function NewGameScreen() {
                         placeholder="All countries"
                         value={selectedCountry}
                         onChange={handleCountryChange}
+                        onClear={() => {
+                            setSelectedCountry("");
+                        }}
                     />
 
                     {selectedCountry && (subnational1?.length ?? 0) > 0 && (
@@ -237,9 +241,12 @@ export default function NewGameScreen() {
                             data={subnational1 ?? []}
                             labelField="name"
                             valueField="code"
-                            placeholder="Select state/province"
+                            placeholder="Entire country"
                             value={selectedState}
                             onChange={handleStateChange}
+                            onClear={() => {
+                                setSelectedState("");
+                            }}
                         />
                     )}
 
@@ -249,9 +256,10 @@ export default function NewGameScreen() {
                             data={subnational2 ?? []}
                             labelField="name"
                             valueField="code"
-                            placeholder="Select county/region"
+                            placeholder="Entire state"
                             value={selectedCounty}
                             onChange={(item) => setSelectedCounty(item.code)}
+                            onClear={() => setSelectedCounty("")}
                         />
                     )}
 
