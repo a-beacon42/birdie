@@ -84,6 +84,13 @@ export const useAuthStore = create<AuthState>()(
                 tokenExpiresAt: state.tokenExpiresAt,
                 user: state.user,
             }),
+            // Auto-fix corrupted persisted state (e.g. user present but token missing)
+            onRehydrateStorage: () => (state) => {
+                if (state && state.user && !state.token) {
+                    console.warn("[authStore] Clearing corrupted persisted state (user without token)");
+                    state.clearAuth();
+                }
+            },
         },
     ),
 );

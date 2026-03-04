@@ -35,8 +35,10 @@ const MAX_DECKS_SHOWN = 3;
 
 export default function HomeScreen() {
     const router = useRouter();
-    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+    const token = useAuthStore((s) => s.token);
     const user = useAuthStore((s) => s.user);
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+    const loggedIn = !!token && !!user;
     const startGame = useGameStore((s) => s.startGame);
 
     const [overview, setOverview] = useState<OverviewStats | null>(null);
@@ -65,12 +67,12 @@ export default function HomeScreen() {
     }, []);
 
     useEffect(() => {
-        if (isAuthenticated()) {
+        if (loggedIn) {
             loadData();
         } else {
             setLoading(false);
         }
-    }, [isAuthenticated, loadData]);
+    }, [loggedIn, loadData]);
 
     const handleRefresh = useCallback(() => {
         setRefreshing(true);
@@ -119,7 +121,7 @@ export default function HomeScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    isAuthenticated() ? (
+                    loggedIn ? (
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={handleRefresh}
@@ -135,7 +137,7 @@ export default function HomeScreen() {
                             Member since {memberSince}
                         </Text>
                     )}
-                    {!isAuthenticated() && (
+                    {!loggedIn && (
                         <Text style={styles.subtitle}>
                             Learn to identify birds
                         </Text>
@@ -143,7 +145,7 @@ export default function HomeScreen() {
                 </View>
 
                 {/* ── Authenticated dashboard ────────────────────────── */}
-                {isAuthenticated() && (
+                {loggedIn && (
                     <>
                         {loading ? (
                             <ActivityIndicator
@@ -208,7 +210,7 @@ export default function HomeScreen() {
                 )}
 
                 {/* ── Anonymous CTA ──────────────────────────────────── */}
-                {!isAuthenticated() && (
+                {!loggedIn && (
                     <View style={styles.ctaCard}>
                         <Text style={styles.ctaTitle}>Welcome to Birdie!</Text>
                         <Text style={styles.ctaText}>
