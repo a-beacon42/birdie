@@ -21,7 +21,7 @@ import { colors, spacing, radii, typography, shadows } from "../../src/theme";
 import { useFamilies, useSubnational1, useSubnational2 } from "../../src/hooks/useApi";
 import { useGameStore } from "../../src/stores/gameStore";
 import { usePreferencesStore } from "../../src/stores/preferencesStore";
-import { createDeck, getSpeciesList } from "../../src/api/birdieApi";
+import { createDeck } from "../../src/api/birdieApi";
 import type { Difficulty } from "../../src/api/birdieApi";
 import type { BirdFamily, Region } from "../../src/types/bird";
 import SearchableDropdown from "../../src/components/SearchableDropdown";
@@ -81,21 +81,10 @@ export default function NewGameScreen() {
         try {
             const regionCode = selectedCounty || selectedState || selectedCountry || null;
 
-            // Get species codes from region filter (if any)
-            let speciesCodes: string[] | undefined;
-            if (regionCode) {
-                speciesCodes = await getSpeciesList(regionCode);
-                if (speciesCodes.length === 0) {
-                    showAlert("No birds found", "No species recorded for this region.");
-                    setCreating(false);
-                    return;
-                }
-            }
-
-            // Build deck via the backend (handles difficulty filtering server-side)
+            // Build deck via the backend — pass region_code so the server
+            // fetches the species list itself (avoids huge payloads).
             const deck = await createDeck({
                 family: selectedFamily || undefined,
-                species_codes: speciesCodes,
                 difficulty: selectedDifficulty ?? undefined,
                 region_code: regionCode ?? undefined,
                 limit: cardCount,

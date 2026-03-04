@@ -17,7 +17,7 @@ from app.services.bird_service import (
     query_birds,
 )
 from app.services.difficulty_service import Difficulty, build_deck
-from app.services.ebird_service import get_region_frequency
+from app.services.ebird_service import get_region_frequency, get_species_list
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +28,8 @@ limiter = Limiter(key_func=get_remote_address)
 _SPECIES_CODE_RE = re.compile(r"^[a-z0-9]{1,10}$", re.IGNORECASE)
 # eBird region codes: 2-letter country, optional dash-separated sub-regions
 _REGION_RE = re.compile(r"^[A-Z]{2}(-[A-Z0-9]{1,10}){0,2}$")
-# Family codes: letters only (e.g. "Accipitridae")
-_FAMILY_RE = re.compile(r"^[A-Za-z]{2,30}$")
+# Family codes: letters + optional trailing digits (e.g. "Accipitridae", "corvid1")
+_FAMILY_RE = re.compile(r"^[A-Za-z]{2,29}[A-Za-z0-9]$")
 
 
 @router.get("", response_model=list[BirdSummary])
@@ -77,7 +77,7 @@ class DeckRequest(BaseModel):
     family: str | None = Field(None, max_length=30, description="Filter by family code")
     species_codes: list[str] | None = Field(
         None,
-        max_length=500,
+        max_length=2000,
         description="Species codes to filter by (from region lookup)",
     )
     difficulty: Difficulty | None = Field(
@@ -129,13 +129,24 @@ async def create_deck(request: Request, req: DeckRequest) -> list[BirdSummary]:
     """
     import asyncio
 
+    # If region_code is provided but species_codes isn't, fetch species
+    # list server-side so clients don't need to send huge payloads.
+    species_codes = req.species_codes
+    if not species_codes and req.region_code:
+        try:
+            species_codes = await get_species_list(req.region_code)
+        except Exception:
+            logger.warning(
+                "eBird species list fetch failed for %s", req.region_code
+            )
+
     # Run sync Cosmos query in threadpool to avoid blocking the event loop
     loop = asyncio.get_event_loop()
     birds = await loop.run_in_executor(
         None,
         lambda: query_birds(
             family_code=req.family,
-            species_codes=req.species_codes,
+            species_codes=species_codes,
             limit=500,
             offset=0,
         ),
