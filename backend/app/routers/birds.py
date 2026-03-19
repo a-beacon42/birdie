@@ -49,6 +49,9 @@ def list_birds(
     species_codes: str | None = Query(
         None, description="Comma-separated species codes to filter by"
     ),
+    search: str | None = Query(
+        None, min_length=2, max_length=100, description="Search by common name"
+    ),
     limit: int = Query(50, ge=1, le=2000),
     offset: int = Query(0, ge=0),
 ) -> list[BirdSummary]:
@@ -61,6 +64,7 @@ def list_birds(
     return query_birds(
         family_code=family,
         species_codes=codes,
+        search=search,
         limit=limit,
         offset=offset,
     )

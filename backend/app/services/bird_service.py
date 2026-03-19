@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 def query_birds(
     family_code: str | None = None,
     species_codes: list[str] | None = None,
+    search: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[BirdSummary]:
@@ -48,6 +49,10 @@ def query_birds(
     if species_codes:
         conditions.append("ARRAY_CONTAINS(@sppCodes, c.species_code)")
         parameters.append({"name": "@sppCodes", "value": species_codes})
+
+    if search:
+        conditions.append("CONTAINS(LOWER(c.com_name), @search)")
+        parameters.append({"name": "@search", "value": search.lower()})
 
     where_clause = (" WHERE " + " AND ".join(conditions)) if conditions else ""
     query = (

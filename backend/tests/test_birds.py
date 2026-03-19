@@ -71,6 +71,7 @@ class TestListBirds:
             mock.assert_called_once_with(
                 family_code=None,
                 species_codes=None,
+                search=None,
                 limit=10,
                 offset=5,
             )
