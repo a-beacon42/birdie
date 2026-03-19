@@ -25,6 +25,7 @@ import {
     playSavedDeck,
     deleteSavedDeck,
     type SavedDeckSummary,
+    type LookalikeBirdSummary,
 } from "../src/api/birdieApi";
 import { showAlert } from "../src/utils/alert";
 
@@ -33,6 +34,7 @@ export default function DecksScreen() {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const user = useAuthStore((s) => s.user);
     const startGame = useGameStore((s) => s.startGame);
+    const startLookalikeGame = useGameStore((s) => s.startLookalikeGame);
 
     const [decks, setDecks] = useState<SavedDeckSummary[]>([]);
     const [loading, setLoading] = useState(true);
@@ -72,14 +74,23 @@ export default function DecksScreen() {
                 showAlert("Empty deck", "No birds found for this deck configuration.");
                 return;
             }
-            startGame(birds, "flashcard", {});
+            if (deck.deck_type === "lookalike") {
+                const lookalikes = birds as LookalikeBirdSummary[];
+                const imageUrlsMap: Record<string, string[]> = {};
+                for (const b of lookalikes) {
+                    imageUrlsMap[b.species_code] = b.image_urls;
+                }
+                startLookalikeGame(lookalikes, imageUrlsMap);
+            } else {
+                startGame(birds, "flashcard", {});
+            }
             router.push("/game");
         } catch (err: unknown) {
             showAlert("Error", err instanceof Error ? err.message : "Failed to load deck");
         } finally {
             setPlayingId(null);
         }
-    }, [startGame, router]);
+    }, [startGame, startLookalikeGame, router]);
 
     const handleDelete = useCallback(async (deck: SavedDeckSummary) => {
         try {
@@ -168,7 +179,12 @@ function DeckCard({
     onPlay: () => void;
     onDelete: () => void;
 }) {
-    const typeLabel = deck.deck_type === "frozen" ? "🔒 Frozen" : "🔄 Dynamic";
+    const typeLabel =
+        deck.deck_type === "lookalike"
+            ? "Lookalike"
+            : deck.deck_type === "frozen"
+                ? "🔒 Frozen"
+                : "🔄 Dynamic";
     const speciesInfo = deck.species_count != null ? `${deck.species_count} species` : "";
     const filterInfo: string[] = [];
     if (deck.filters) {

@@ -6,7 +6,7 @@
  * with disk caching and a graceful error fallback.
  */
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { colors, spacing, radii, typography, shadows } from "../theme";
@@ -18,6 +18,8 @@ interface DeckPosition {
 
 interface FlashCardProps {
   imageUrl: string;
+  /** Multiple image URLs for lookalike mode — a random one is picked on mount */
+  imageUrls?: string[];
   commonName: string;
   latinName: string;
   speciesCode: string;
@@ -34,6 +36,7 @@ const PLACEHOLDER = require("../../assets/splash-icon.png");
 
 const FlashCard: React.FC<FlashCardProps> = ({
   imageUrl,
+  imageUrls,
   commonName,
   latinName,
   cardWidth = 350,
@@ -44,6 +47,14 @@ const FlashCard: React.FC<FlashCardProps> = ({
   const flipAnim = useRef(new Animated.Value(0)).current;
   const [flipped, setFlipped] = useState(false);
   const [imageError, setImageError] = useState(false);
+
+  // For lookalike mode: pick a random image from the pool on mount
+  const resolvedImageUrl = useMemo(() => {
+    if (imageUrls && imageUrls.length > 0) {
+      return imageUrls[Math.floor(Math.random() * imageUrls.length)];
+    }
+    return imageUrl;
+  }, [imageUrl, imageUrls]);
 
   const frontRotation = flipAnim.interpolate({
     inputRange: [0, 180],
@@ -74,7 +85,7 @@ const FlashCard: React.FC<FlashCardProps> = ({
   }, [onInfoPress]);
 
   const cardHeight = cardWidth * 1.15;
-  const imageSource = imageUrl && !imageError ? imageUrl : PLACEHOLDER;
+  const imageSource = resolvedImageUrl && !imageError ? resolvedImageUrl : PLACEHOLDER;
 
   return (
     <Pressable

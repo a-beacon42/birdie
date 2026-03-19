@@ -31,6 +31,8 @@ interface GameState {
     quizMode: QuizMode;
     isPlaying: boolean;
     filters: GameFilters;
+    isLookalike: boolean;
+    imageUrlsMap: Record<string, string[]>;
 
     // --- Score Tracking ---
     answers: SessionAnswer[];
@@ -38,6 +40,7 @@ interface GameState {
 
     // --- Actions ---
     startGame: (birds: BirdSummary[], mode?: QuizMode, filters?: GameFilters) => void;
+    startLookalikeGame: (birds: BirdSummary[], imageUrlsMap: Record<string, string[]>, filters?: GameFilters) => void;
     endGame: () => void;
     resetGame: () => void;
     nextBird: () => void;
@@ -59,6 +62,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     quizMode: "flashcard",
     isPlaying: false,
     filters: {},
+    isLookalike: false,
+    imageUrlsMap: {},
     answers: [],
     sessionStartedAt: null,
 
@@ -69,6 +74,21 @@ export const useGameStore = create<GameState>((set, get) => ({
             quizMode: mode,
             isPlaying: true,
             filters,
+            isLookalike: false,
+            imageUrlsMap: {},
+            answers: [],
+            sessionStartedAt: Date.now(),
+        }),
+
+    startLookalikeGame: (birds, imageUrlsMap, filters = {}) =>
+        set({
+            birds,
+            currentIndex: 0,
+            quizMode: "flashcard",
+            isPlaying: true,
+            filters,
+            isLookalike: true,
+            imageUrlsMap,
             answers: [],
             sessionStartedAt: Date.now(),
         }),
@@ -84,6 +104,8 @@ export const useGameStore = create<GameState>((set, get) => ({
             birds: [],
             currentIndex: 0,
             filters: {},
+            isLookalike: false,
+            imageUrlsMap: {},
             answers: [],
             sessionStartedAt: null,
         }),

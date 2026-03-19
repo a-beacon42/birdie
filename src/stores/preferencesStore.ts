@@ -11,6 +11,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Difficulty } from "../api/birdieApi";
 
 type ColorScheme = "light" | "dark";
+type GameMode = "standard" | "lookalikes";
 
 interface PreferencesState {
     cardCount: number;
@@ -20,6 +21,8 @@ interface PreferencesState {
     selectedCounty: string;
     selectedDifficulty: Difficulty | null;
     colorScheme: ColorScheme;
+    gameMode: GameMode;
+    selectedLookalikeSpecies: string[];
 
     setCardCount: (count: number) => void;
     setSelectedFamily: (family: string) => void;
@@ -28,6 +31,8 @@ interface PreferencesState {
     setSelectedCounty: (county: string) => void;
     setSelectedDifficulty: (difficulty: Difficulty | null) => void;
     setColorScheme: (scheme: ColorScheme) => void;
+    setGameMode: (mode: GameMode) => void;
+    setSelectedLookalikeSpecies: (species: string[]) => void;
     clearAll: () => void;
 }
 
@@ -39,6 +44,8 @@ const DEFAULT_STATE = {
     selectedCounty: "",
     selectedDifficulty: null as Difficulty | null,
     colorScheme: "light" as ColorScheme,
+    gameMode: "standard" as GameMode,
+    selectedLookalikeSpecies: [] as string[],
 };
 
 export const usePreferencesStore = create<PreferencesState>()(
@@ -55,6 +62,9 @@ export const usePreferencesStore = create<PreferencesState>()(
             setSelectedCounty: (selectedCounty) => set({ selectedCounty }),
             setSelectedDifficulty: (selectedDifficulty) => set({ selectedDifficulty }),
             setColorScheme: (colorScheme) => set({ colorScheme }),
+            setGameMode: (gameMode) => set({ gameMode }),
+            setSelectedLookalikeSpecies: (selectedLookalikeSpecies) =>
+                set({ selectedLookalikeSpecies }),
             clearAll: () => set(DEFAULT_STATE),
         }),
         {
@@ -69,6 +79,8 @@ export const usePreferencesStore = create<PreferencesState>()(
                 selectedCounty: state.selectedCounty,
                 selectedDifficulty: state.selectedDifficulty,
                 colorScheme: state.colorScheme,
+                gameMode: state.gameMode,
+                selectedLookalikeSpecies: state.selectedLookalikeSpecies,
             }),
         },
     ),

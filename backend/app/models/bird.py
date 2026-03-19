@@ -65,6 +65,12 @@ class BirdSummary(BaseModel):
     lookalike_count: int = 0
 
 
+class LookalikeBirdSummary(BirdSummary):
+    """Bird summary with all available image URLs for lookalike mode."""
+
+    image_urls: list[str] = Field(default_factory=list)
+
+
 class ChatMessage(BaseModel):
     """A single chat message with validated role and bounded content."""
 
