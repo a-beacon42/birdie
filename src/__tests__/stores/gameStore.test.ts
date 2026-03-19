@@ -96,15 +96,15 @@ describe("gameStore", () => {
         });
 
         it("adds a new answer", () => {
-            useGameStore.getState().recordAnswer("norcar", "correct", 1500);
+            useGameStore.getState().recordAnswer("norcar", "norcar", "correct", 1500);
             const answers = useGameStore.getState().answers;
             expect(answers).toHaveLength(1);
-            expect(answers[0]).toEqual({ speciesCode: "norcar", result: "correct", timeMs: 1500 });
+            expect(answers[0]).toEqual({ cardId: "norcar", speciesCode: "norcar", result: "correct", timeMs: 1500 });
         });
 
-        it("updates an existing answer for same species", () => {
-            useGameStore.getState().recordAnswer("norcar", "correct", 1500);
-            useGameStore.getState().recordAnswer("norcar", "incorrect", 2000);
+        it("updates an existing answer for same card", () => {
+            useGameStore.getState().recordAnswer("norcar", "norcar", "correct", 1500);
+            useGameStore.getState().recordAnswer("norcar", "norcar", "incorrect", 2000);
             const answers = useGameStore.getState().answers;
             expect(answers).toHaveLength(1);
             expect(answers[0].result).toBe("incorrect");
@@ -114,7 +114,7 @@ describe("gameStore", () => {
     describe("markUnansweredAsSkipped", () => {
         it("marks remaining birds as skipped", () => {
             useGameStore.getState().startGame(birds);
-            useGameStore.getState().recordAnswer("norcar", "correct", 1000);
+            useGameStore.getState().recordAnswer("norcar", "norcar", "correct", 1000);
             useGameStore.getState().markUnansweredAsSkipped();
             const answers = useGameStore.getState().answers;
             expect(answers).toHaveLength(3);
@@ -125,9 +125,9 @@ describe("gameStore", () => {
     describe("score", () => {
         it("tallies correct, incorrect, skipped", () => {
             useGameStore.getState().startGame(birds);
-            useGameStore.getState().recordAnswer("norcar", "correct", 1000);
-            useGameStore.getState().recordAnswer("baleag", "incorrect", 2000);
-            useGameStore.getState().recordAnswer("rethaw", "skipped", 0);
+            useGameStore.getState().recordAnswer("norcar", "norcar", "correct", 1000);
+            useGameStore.getState().recordAnswer("baleag", "baleag", "incorrect", 2000);
+            useGameStore.getState().recordAnswer("rethaw", "rethaw", "skipped", 0);
             const score = useGameStore.getState().score();
             expect(score).toEqual({ correct: 1, incorrect: 1, skipped: 1, total: 3 });
         });
@@ -136,7 +136,7 @@ describe("gameStore", () => {
     describe("resetGame", () => {
         it("clears all state", () => {
             useGameStore.getState().startGame(birds);
-            useGameStore.getState().recordAnswer("norcar", "correct", 1000);
+            useGameStore.getState().recordAnswer("norcar", "norcar", "correct", 1000);
             useGameStore.getState().resetGame();
             const state = useGameStore.getState();
             expect(state.isPlaying).toBe(false);
@@ -150,7 +150,7 @@ describe("gameStore", () => {
         it("resets answers and index but keeps birds", () => {
             useGameStore.getState().startGame(birds);
             useGameStore.getState().goToIndex(2);
-            useGameStore.getState().recordAnswer("norcar", "correct", 1000);
+            useGameStore.getState().recordAnswer("norcar", "norcar", "correct", 1000);
             useGameStore.getState().clearAnswers();
             const state = useGameStore.getState();
             expect(state.answers).toHaveLength(0);
