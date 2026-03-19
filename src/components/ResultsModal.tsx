@@ -35,7 +35,7 @@ const ResultsModal: React.FC<ResultsModalProps> = ({
     onEndGame,
     onResetGame,
 }) => {
-    const { answers, birds } = useGameStore();
+    const { answers, birds, isLookalike } = useGameStore();
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const user = useAuthStore((s) => s.user);
     const primaryBtnRef = useRef<View>(null);
@@ -43,7 +43,7 @@ const ResultsModal: React.FC<ResultsModalProps> = ({
     // Save deck state
     const [showSaveDeck, setShowSaveDeck] = useState(false);
     const [deckName, setDeckName] = useState("");
-    const [deckType, setDeckType] = useState<"frozen" | "dynamic">("frozen");
+    const [deckType, setDeckType] = useState<"frozen" | "dynamic" | "lookalike">("frozen");
     const [saving, setSaving] = useState(false);
     const [deckSaved, setDeckSaved] = useState(false);
 
@@ -53,11 +53,19 @@ const ResultsModal: React.FC<ResultsModalProps> = ({
             const id = setTimeout(() => primaryBtnRef.current?.focus(), 150);
             // Reset save deck state on modal open
             setShowSaveDeck(false);
-            setDeckName("");
             setDeckSaved(false);
+            if (isLookalike) {
+                setDeckType("lookalike");
+                // Default name to "Species A vs Species B"
+                const uniqueNames = [...new Set(birds.map((b) => b.com_name))];
+                setDeckName(uniqueNames.join(" vs "));
+            } else {
+                setDeckType("frozen");
+                setDeckName("");
+            }
             return () => clearTimeout(id);
         }
-    }, [visible]);
+    }, [visible, isLookalike, birds]);
 
     const { correct, incorrect, skipped, total, pct, avgTime } = useMemo(() => {
         let c = 0, inc = 0, sk = 0;
@@ -81,11 +89,13 @@ const ResultsModal: React.FC<ResultsModalProps> = ({
         }
         setSaving(true);
         try {
-            const speciesCodes = birds.map((b) => b.species_code);
+            const speciesCodes = [...new Set(birds.map((b) => b.species_code))];
             const req: SaveDeckRequest = {
                 name: deckName.trim(),
                 deck_type: deckType,
-                ...(deckType === "frozen" ? { species_codes: speciesCodes } : {}),
+                ...(deckType === "frozen" || deckType === "lookalike"
+                    ? { species_codes: speciesCodes }
+                    : {}),
             };
             await saveDeck(req);
             setDeckSaved(true);
@@ -180,40 +190,42 @@ const ResultsModal: React.FC<ResultsModalProps> = ({
                                             maxLength={100}
                                             accessibilityLabel="Deck name"
                                         />
-                                        <View style={styles.deckTypeRow}>
-                                            <Pressable
-                                                style={[
-                                                    styles.deckTypeChip,
-                                                    deckType === "frozen" && styles.deckTypeActive,
-                                                ]}
-                                                onPress={() => setDeckType("frozen")}
-                                            >
-                                                <Text
+                                        {!isLookalike && (
+                                            <View style={styles.deckTypeRow}>
+                                                <Pressable
                                                     style={[
-                                                        styles.deckTypeText,
-                                                        deckType === "frozen" && styles.deckTypeTextActive,
+                                                        styles.deckTypeChip,
+                                                        deckType === "frozen" && styles.deckTypeActive,
                                                     ]}
+                                                    onPress={() => setDeckType("frozen")}
                                                 >
-                                                    🔒 Frozen
-                                                </Text>
-                                            </Pressable>
-                                            <Pressable
-                                                style={[
-                                                    styles.deckTypeChip,
-                                                    deckType === "dynamic" && styles.deckTypeActive,
-                                                ]}
-                                                onPress={() => setDeckType("dynamic")}
-                                            >
-                                                <Text
+                                                    <Text
+                                                        style={[
+                                                            styles.deckTypeText,
+                                                            deckType === "frozen" && styles.deckTypeTextActive,
+                                                        ]}
+                                                    >
+                                                        🔒 Frozen
+                                                    </Text>
+                                                </Pressable>
+                                                <Pressable
                                                     style={[
-                                                        styles.deckTypeText,
-                                                        deckType === "dynamic" && styles.deckTypeTextActive,
+                                                        styles.deckTypeChip,
+                                                        deckType === "dynamic" && styles.deckTypeActive,
                                                     ]}
+                                                    onPress={() => setDeckType("dynamic")}
                                                 >
-                                                    🔄 Dynamic
-                                                </Text>
-                                            </Pressable>
-                                        </View>
+                                                    <Text
+                                                        style={[
+                                                            styles.deckTypeText,
+                                                            deckType === "dynamic" && styles.deckTypeTextActive,
+                                                        ]}
+                                                    >
+                                                        🔄 Dynamic
+                                                    </Text>
+                                                </Pressable>
+                                            </View>
+                                        )}
                                         <Pressable
                                             style={[
                                                 styles.button,

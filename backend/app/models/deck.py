@@ -61,9 +61,9 @@ class SavedDeck(BaseModel):
     id: str  # UUID4
     user_id: str  # partition key — SHA-256 user ID
     name: str  # user-provided label
-    deck_type: Literal["dynamic", "frozen"] = "dynamic"
+    deck_type: Literal["dynamic", "frozen", "lookalike"] = "dynamic"
     filters: DeckFilters | None = None  # populated for dynamic
-    species_codes: list[str] | None = None  # populated for frozen
+    species_codes: list[str] | None = None  # populated for frozen / lookalike
     created_at: str  # ISO-8601
     last_played_at: str | None = None  # ISO-8601
 
@@ -72,9 +72,9 @@ class DeckCreateRequest(BaseModel):
     """Client payload for saving a new deck."""
 
     name: str = Field(min_length=1, max_length=100, description="Deck label.")
-    deck_type: Literal["dynamic", "frozen"] = Field(
+    deck_type: Literal["dynamic", "frozen", "lookalike"] = Field(
         "dynamic",
-        description="'dynamic' re-generates each play; 'frozen' locks species.",
+        description="'dynamic' re-generates each play; 'frozen' locks species; 'lookalike' compares similar species.",
     )
     filters: DeckFilters | None = Field(None, description="Required for dynamic decks.")
     species_codes: list[str] | None = Field(
@@ -96,7 +96,7 @@ class DeckUpdateRequest(BaseModel):
     """Client payload for updating a saved deck."""
 
     name: str | None = Field(None, min_length=1, max_length=100)
-    deck_type: Literal["dynamic", "frozen"] | None = None
+    deck_type: Literal["dynamic", "frozen", "lookalike"] | None = None
     filters: DeckFilters | None = None
     species_codes: list[str] | None = None
 
@@ -118,7 +118,7 @@ class DeckResponse(BaseModel):
 
     id: str
     name: str
-    deck_type: Literal["dynamic", "frozen"]
+    deck_type: Literal["dynamic", "frozen", "lookalike"]
     filters: DeckFilters | None = None
     species_codes: list[str] | None = None
     created_at: str
@@ -130,7 +130,7 @@ class DeckListResponse(BaseModel):
 
     id: str
     name: str
-    deck_type: Literal["dynamic", "frozen"]
+    deck_type: Literal["dynamic", "frozen", "lookalike"]
     filters: DeckFilters | None = None
     species_count: int | None = None  # for frozen decks
     created_at: str

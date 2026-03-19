@@ -18,12 +18,12 @@ import { useRouter } from "expo-router";
 import { showAlert } from "../../src/utils/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, radii, typography, shadows } from "../../src/theme";
-import { useFamilies, useSubnational1, useSubnational2 } from "../../src/hooks/useApi";
+import { useFamilies, useSubnational1, useSubnational2, useBirds } from "../../src/hooks/useApi";
 import { useGameStore } from "../../src/stores/gameStore";
 import { usePreferencesStore } from "../../src/stores/preferencesStore";
-import { createDeck } from "../../src/api/birdieApi";
-import type { Difficulty } from "../../src/api/birdieApi";
-import type { BirdFamily, Region } from "../../src/types/bird";
+import { createDeck, createLookalikeDeck } from "../../src/api/birdieApi";
+import type { Difficulty, LookalikeBirdSummary } from "../../src/api/birdieApi";
+import type { BirdFamily, BirdSummary, Region } from "../../src/types/bird";
 import SearchableDropdown from "../../src/components/SearchableDropdown";
 import allCountries from "../../src/data/AllCountries.json";
 
@@ -36,10 +36,16 @@ const DIFFICULTIES: { key: Difficulty | null; label: string }[] = [
     { key: "medium", label: "Medium" },
     { key: "hard", label: "Hard" },
 ];
+const GAME_MODES = [
+    { key: "standard" as const, label: "Standard" },
+    { key: "lookalikes" as const, label: "Lookalikes" },
+];
+const MAX_LOOKALIKE_SPECIES = 10;
 
 export default function NewGameScreen() {
     const router = useRouter();
     const startGame = useGameStore((s) => s.startGame);
+    const startLookalikeGame = useGameStore((s) => s.startLookalikeGame);
 
     // Persisted filter preferences
     const cardCount = usePreferencesStore((s) => s.cardCount);
@@ -54,13 +60,30 @@ export default function NewGameScreen() {
     const setSelectedCounty = usePreferencesStore((s) => s.setSelectedCounty);
     const selectedDifficulty = usePreferencesStore((s) => s.selectedDifficulty);
     const setSelectedDifficulty = usePreferencesStore((s) => s.setSelectedDifficulty);
+    const gameMode = usePreferencesStore((s) => s.gameMode);
+    const setGameMode = usePreferencesStore((s) => s.setGameMode);
+    const selectedLookalikeSpecies = usePreferencesStore((s) => s.selectedLookalikeSpecies);
+    const setSelectedLookalikeSpecies = usePreferencesStore((s) => s.setSelectedLookalikeSpecies);
     const clearAll = usePreferencesStore((s) => s.clearAll);
     const [creating, setCreating] = useState(false);
+
+    // Track selected species names for display
+    const [selectedSpeciesNames, setSelectedSpeciesNames] = useState<Record<string, string>>({});
 
     // API data
     const { data: families, loading: familiesLoading, error: familiesError } = useFamilies();
     const { data: subnational1 } = useSubnational1(selectedCountry || null);
     const { data: subnational2 } = useSubnational2(selectedState || null);
+
+    // All birds for lookalike species search (loaded lazily when in lookalikes mode)
+    const { data: allBirds, loading: birdsLoading } = useBirds(
+        { limit: 2000 },
+    );
+
+    // Filter out already-selected species from the search list
+    const availableBirds = (allBirds ?? []).filter(
+        (b) => !selectedLookalikeSpecies.includes(b.species_code),
+    );
 
     const handleCountryChange = useCallback(
         (item: Country) => {
@@ -76,9 +99,82 @@ export default function NewGameScreen() {
         [setSelectedState],
     );
 
+    // --- Lookalikes: species selection ---
+
+    const handleAddLookalikeSpecies = useCallback(
+        (bird: BirdSummary) => {
+            if (selectedLookalikeSpecies.includes(bird.species_code)) return;
+            if (selectedLookalikeSpecies.length >= MAX_LOOKALIKE_SPECIES) return;
+            setSelectedLookalikeSpecies([...selectedLookalikeSpecies, bird.species_code]);
+            setSelectedSpeciesNames((prev) => ({
+                ...prev,
+                [bird.species_code]: bird.com_name,
+            }));
+        },
+        [selectedLookalikeSpecies, setSelectedLookalikeSpecies],
+    );
+
+    const handleRemoveLookalikeSpecies = useCallback(
+        (code: string) => {
+            setSelectedLookalikeSpecies(
+                selectedLookalikeSpecies.filter((c) => c !== code),
+            );
+        },
+        [selectedLookalikeSpecies, setSelectedLookalikeSpecies],
+    );
+
+    // --- Create game handlers ---
+
     const handleCreateGame = useCallback(async () => {
         setCreating(true);
         try {
+            if (gameMode === "lookalikes") {
+                if (selectedLookalikeSpecies.length < 2) {
+                    showAlert("Select species", "Pick at least 2 species to compare.");
+                    setCreating(false);
+                    return;
+                }
+
+                const lookalikeData = await createLookalikeDeck(selectedLookalikeSpecies);
+
+                if (lookalikeData.length === 0) {
+                    showAlert("No birds found", "Try different species.");
+                    setCreating(false);
+                    return;
+                }
+
+                // Build image URLs map and expand birds for the requested card count
+                const imageUrlsMap: Record<string, string[]> = {};
+                for (const bird of lookalikeData) {
+                    imageUrlsMap[bird.species_code] = bird.image_urls;
+                }
+
+                // Create N cards per species, cycling through the full set
+                const expandedBirds: BirdSummary[] = [];
+                const perSpecies = Math.max(1, Math.floor(cardCount / lookalikeData.length));
+                for (const bird of lookalikeData) {
+                    for (let i = 0; i < perSpecies; i++) {
+                        expandedBirds.push(bird);
+                    }
+                }
+                // Shuffle
+                for (let i = expandedBirds.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [expandedBirds[i], expandedBirds[j]] = [expandedBirds[j], expandedBirds[i]];
+                }
+
+                const speciesLabel = lookalikeData
+                    .map((b) => b.com_name)
+                    .join(" vs ");
+
+                startLookalikeGame(expandedBirds, imageUrlsMap, {
+                    familyLabel: speciesLabel,
+                });
+                router.push("/game");
+                return;
+            }
+
+            // Standard mode
             const regionCode = selectedCounty || selectedState || selectedCountry || null;
 
             // Build deck via the backend — pass region_code so the server
@@ -125,6 +221,8 @@ export default function NewGameScreen() {
             setCreating(false);
         }
     }, [
+        gameMode,
+        selectedLookalikeSpecies,
         cardCount,
         selectedFamily,
         selectedDifficulty,
@@ -135,6 +233,7 @@ export default function NewGameScreen() {
         subnational1,
         subnational2,
         startGame,
+        startLookalikeGame,
         router,
     ]);
 
@@ -152,6 +251,27 @@ export default function NewGameScreen() {
                 {/* Card */}
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>New Game</Text>
+
+                    {/* Game Mode Toggle */}
+                    <SectionHeader label="Game mode" />
+                    <View style={styles.chipRow}>
+                        {GAME_MODES.map((m) => (
+                            <Pressable
+                                key={m.key}
+                                style={[styles.chip, gameMode === m.key && styles.chipActive]}
+                                onPress={() => setGameMode(m.key)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.chipText,
+                                        gameMode === m.key && styles.chipTextActive,
+                                    ]}
+                                >
+                                    {m.label}
+                                </Text>
+                            </Pressable>
+                        ))}
+                    </View>
 
                     {/* Card count */}
                     <SectionHeader label="Number of cards" />
@@ -174,93 +294,144 @@ export default function NewGameScreen() {
                         ))}
                     </View>
 
-                    {/* Difficulty */}
-                    <SectionHeader label="Difficulty (optional)" />
-                    <View style={styles.chipRow}>
-                        {DIFFICULTIES.map((d) => (
-                            <Pressable
-                                key={d.label}
-                                style={[
-                                    styles.chip,
-                                    selectedDifficulty === d.key && styles.chipActive,
-                                ]}
-                                onPress={() => setSelectedDifficulty(d.key)}
-                            >
-                                <Text
-                                    style={[
-                                        styles.chipText,
-                                        selectedDifficulty === d.key && styles.chipTextActive,
-                                    ]}
-                                >
-                                    {d.label}
-                                </Text>
-                            </Pressable>
-                        ))}
-                    </View>
+                    {gameMode === "standard" && (
+                        <>
+                            {/* Difficulty */}
+                            <SectionHeader label="Difficulty (optional)" />
+                            <View style={styles.chipRow}>
+                                {DIFFICULTIES.map((d) => (
+                                    <Pressable
+                                        key={d.label}
+                                        style={[
+                                            styles.chip,
+                                            selectedDifficulty === d.key && styles.chipActive,
+                                        ]}
+                                        onPress={() => setSelectedDifficulty(d.key)}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.chipText,
+                                                selectedDifficulty === d.key && styles.chipTextActive,
+                                            ]}
+                                        >
+                                            {d.label}
+                                        </Text>
+                                    </Pressable>
+                                ))}
+                            </View>
 
-                    {/* Family filter */}
-                    <SectionHeader label="Family (optional)" />
-                    {familiesLoading ? (
-                        <ActivityIndicator
-                            color={colors.primary}
-                            style={{ marginVertical: spacing.sm }}
-                        />
-                    ) : familiesError ? (
-                        <Text style={styles.errorText}>Could not load families</Text>
-                    ) : (
-                        <SearchableDropdown<BirdFamily>
-                            label="Family"
-                            data={families ?? []}
-                            labelField="family_com_name"
-                            valueField="family_code"
-                            placeholder="All families"
-                            value={selectedFamily}
-                            onChange={(item) => setSelectedFamily(item.family_code)}
-                            onClear={() => setSelectedFamily("")}
-                        />
+                            {/* Family filter */}
+                            <SectionHeader label="Family (optional)" />
+                            {familiesLoading ? (
+                                <ActivityIndicator
+                                    color={colors.primary}
+                                    style={{ marginVertical: spacing.sm }}
+                                />
+                            ) : familiesError ? (
+                                <Text style={styles.errorText}>Could not load families</Text>
+                            ) : (
+                                <SearchableDropdown<BirdFamily>
+                                    label="Family"
+                                    data={families ?? []}
+                                    labelField="family_com_name"
+                                    valueField="family_code"
+                                    placeholder="All families"
+                                    value={selectedFamily}
+                                    onChange={(item) => setSelectedFamily(item.family_code)}
+                                    onClear={() => setSelectedFamily("")}
+                                />
+                            )}
+
+                            {/* Location filter */}
+                            <SectionHeader label="Location (optional)" />
+                            <SearchableDropdown<Country>
+                                label="Country"
+                                data={allCountries as Country[]}
+                                labelField="name"
+                                valueField="code"
+                                placeholder="All countries"
+                                value={selectedCountry}
+                                onChange={handleCountryChange}
+                                onClear={() => {
+                                    setSelectedCountry("");
+                                }}
+                            />
+
+                            {selectedCountry && (subnational1?.length ?? 0) > 0 && (
+                                <SearchableDropdown<Region>
+                                    label="State / Province"
+                                    data={subnational1 ?? []}
+                                    labelField="name"
+                                    valueField="code"
+                                    placeholder="Entire country"
+                                    value={selectedState}
+                                    onChange={handleStateChange}
+                                    onClear={() => {
+                                        setSelectedState("");
+                                    }}
+                                />
+                            )}
+
+                            {selectedState && (subnational2?.length ?? 0) > 0 && (
+                                <SearchableDropdown<Region>
+                                    label="County / Region"
+                                    data={subnational2 ?? []}
+                                    labelField="name"
+                                    valueField="code"
+                                    placeholder="Entire state"
+                                    value={selectedCounty}
+                                    onChange={(item) => setSelectedCounty(item.code)}
+                                    onClear={() => setSelectedCounty("")}
+                                />
+                            )}
+                        </>
                     )}
 
-                    {/* Location filter */}
-                    <SectionHeader label="Location (optional)" />
-                    <SearchableDropdown<Country>
-                        label="Country"
-                        data={allCountries as Country[]}
-                        labelField="name"
-                        valueField="code"
-                        placeholder="All countries"
-                        value={selectedCountry}
-                        onChange={handleCountryChange}
-                        onClear={() => {
-                            setSelectedCountry("");
-                        }}
-                    />
+                    {gameMode === "lookalikes" && (
+                        <>
+                            {/* Species search */}
+                            <SectionHeader label="Select species to compare (2–10)" />
+                            {birdsLoading ? (
+                                <ActivityIndicator
+                                    color={colors.primary}
+                                    style={{ marginVertical: spacing.sm }}
+                                />
+                            ) : (
+                                <SearchableDropdown<BirdSummary>
+                                    label="Search birds"
+                                    data={availableBirds}
+                                    labelField="com_name"
+                                    valueField="species_code"
+                                    placeholder="Type a bird name..."
+                                    value={null}
+                                    onChange={handleAddLookalikeSpecies}
+                                    search
+                                    searchPlaceholder="Search by common name"
+                                />
+                            )}
 
-                    {selectedCountry && (subnational1?.length ?? 0) > 0 && (
-                        <SearchableDropdown<Region>
-                            label="State / Province"
-                            data={subnational1 ?? []}
-                            labelField="name"
-                            valueField="code"
-                            placeholder="Entire country"
-                            value={selectedState}
-                            onChange={handleStateChange}
-                            onClear={() => {
-                                setSelectedState("");
-                            }}
-                        />
-                    )}
-
-                    {selectedState && (subnational2?.length ?? 0) > 0 && (
-                        <SearchableDropdown<Region>
-                            label="County / Region"
-                            data={subnational2 ?? []}
-                            labelField="name"
-                            valueField="code"
-                            placeholder="Entire state"
-                            value={selectedCounty}
-                            onChange={(item) => setSelectedCounty(item.code)}
-                            onClear={() => setSelectedCounty("")}
-                        />
+                            {/* Selected species tags */}
+                            {selectedLookalikeSpecies.length > 0 && (
+                                <View style={styles.tagContainer}>
+                                    {selectedLookalikeSpecies.map((code) => (
+                                        <View key={code} style={styles.tag}>
+                                            <Text style={styles.tagText}>
+                                                {selectedSpeciesNames[code] || code}
+                                            </Text>
+                                            <Pressable
+                                                onPress={() => handleRemoveLookalikeSpecies(code)}
+                                                hitSlop={8}
+                                            >
+                                                <Text style={styles.tagRemove}>x</Text>
+                                            </Pressable>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                            <Text style={styles.speciesCount}>
+                                {selectedLookalikeSpecies.length} of {MAX_LOOKALIKE_SPECIES} species selected
+                            </Text>
+                        </>
                     )}
 
                     {/* Actions */}
@@ -401,5 +572,35 @@ const styles = StyleSheet.create({
         color: colors.error,
         textAlign: "center",
         marginVertical: spacing.sm,
+    },
+    tagContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: spacing.xs,
+        marginTop: spacing.sm,
+    },
+    tag: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.primaryLight + "20",
+        borderRadius: radii.full,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+        gap: spacing.xs,
+    },
+    tagText: {
+        ...typography.bodySmall,
+        color: colors.primary,
+    },
+    tagRemove: {
+        ...typography.label,
+        color: colors.textSecondary,
+        marginLeft: spacing.xs,
+    },
+    speciesCount: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        textAlign: "center",
+        marginTop: spacing.sm,
     },
 });

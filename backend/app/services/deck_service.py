@@ -87,8 +87,8 @@ def create_deck(user_id: str, req: DeckCreateRequest) -> DeckResponse:
     # Validate deck type requirements
     if req.deck_type == "dynamic" and not req.filters:
         raise ValueError("Dynamic decks require filters")
-    if req.deck_type == "frozen" and not req.species_codes:
-        raise ValueError("Frozen decks require species_codes")
+    if req.deck_type in ("frozen", "lookalike") and not req.species_codes:
+        raise ValueError(f"{req.deck_type.capitalize()} decks require species_codes")
 
     container = get_decks_container()
 
@@ -180,8 +180,8 @@ def update_deck(user_id: str, deck_id: str, req: DeckUpdateRequest) -> DeckRespo
     # Re-validate consistency
     if doc["deck_type"] == "dynamic" and not doc.get("filters"):
         raise ValueError("Dynamic decks require filters")
-    if doc["deck_type"] == "frozen" and not doc.get("species_codes"):
-        raise ValueError("Frozen decks require species_codes")
+    if doc["deck_type"] in ("frozen", "lookalike") and not doc.get("species_codes"):
+        raise ValueError(f"{doc['deck_type'].capitalize()} decks require species_codes")
 
     container.upsert_item(body=doc)
     logger.info("Deck updated: %s", deck_id[:8])

@@ -46,6 +46,7 @@ export default function GameScreen() {
     markUnansweredAsSkipped,
     clearAnswers,
     filters,
+    imageUrlsMap,
   } = useGameStore();
 
   const [showResults, setShowResults] = useState(false);
@@ -275,8 +276,9 @@ export default function GameScreen() {
               {/* Card with swipe */}
               <View style={styles.cardArea}>
                 <FlashCard
-                  key={currentBird.species_code}
+                  key={`${currentBird.species_code}-${currentIndex}`}
                   imageUrl={currentBird.image_url}
+                  imageUrls={imageUrlsMap[currentBird.species_code]}
                   commonName={currentBird.com_name}
                   latinName={currentBird.sci_name}
                   speciesCode={currentBird.species_code}

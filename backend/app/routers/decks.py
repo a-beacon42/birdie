@@ -12,14 +12,18 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.dependencies.auth import AuthenticatedUser, get_current_user
-from app.models.bird import BirdSummary
+from app.models.bird import BirdSummary, LookalikeBirdSummary
 from app.models.deck import (
     DeckCreateRequest,
     DeckListResponse,
     DeckResponse,
     DeckUpdateRequest,
 )
-from app.services.bird_service import query_birds
+from app.services.bird_service import (
+    query_birds,
+    ensure_images,
+    query_birds_with_images,
+)
 from app.services.deck_service import (
     create_deck,
     delete_deck,
@@ -134,18 +138,21 @@ def delete(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/{deck_id}/play", response_model=list[BirdSummary])
+@router.post(
+    "/{deck_id}/play", response_model=list[BirdSummary] | list[LookalikeBirdSummary]
+)
 @limiter.limit("60/minute")
 async def play(
     request: Request,
     deck_id: str,
     user: AuthenticatedUser = Depends(get_current_user),
-) -> list[BirdSummary]:
+) -> list[BirdSummary] | list[LookalikeBirdSummary]:
     """Generate a playable deck from a saved configuration.
 
     - **Dynamic decks**: re-runs the stored filters against the current bird data,
       returning a fresh shuffled deck each time.
     - **Frozen decks**: fetches the exact stored species, shuffled.
+    - **Lookalike decks**: ensures images and returns species with all image URLs.
 
     Updates ``last_played_at`` on the deck.
     """
@@ -156,7 +163,13 @@ async def play(
 
     loop = asyncio.get_event_loop()
 
-    if deck.deck_type == "frozen" and deck.species_codes:
+    if deck.deck_type == "lookalike" and deck.species_codes:
+        # Lookalike: ensure images then return with all image URLs
+        await ensure_images(deck.species_codes, min_count=5)
+        birds = await loop.run_in_executor(
+            None, lambda: query_birds_with_images(deck.species_codes)  # type: ignore
+        )
+    elif deck.deck_type == "frozen" and deck.species_codes:
         # Frozen: fetch exact species by code
         birds = await loop.run_in_executor(
             None,

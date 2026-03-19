@@ -1,10 +1,19 @@
 """Service layer for bird data operations against Cosmos DB."""
 
+import asyncio
+import logging
 import threading
 import time
 
-from app.models.bird import Bird, BirdSummary, DataVersion
+from app.models.bird import (
+    Bird,
+    BirdImage,
+    BirdSummary,
+    DataVersion,
+    LookalikeBirdSummary,
+)
 from app.services.cosmos import get_birds_container
+from app.services.inaturalist_service import fetch_photos
 
 # In-memory cache for families (static data — rarely changes).
 _cache_lock = threading.Lock()
@@ -16,6 +25,8 @@ _FAMILIES_TTL: float = 3600  # refresh once per hour
 _version_cache: DataVersion | None = None
 _version_cache_ts: float = 0.0
 _VERSION_TTL: float = 3600  # refresh once per hour
+
+logger = logging.getLogger(__name__)
 
 
 def query_birds(
@@ -184,3 +195,123 @@ def get_data_version() -> DataVersion:
         _version_cache_ts = now
 
     return result
+
+
+# ---------------------------------------------------------------------------
+#  Lookalike helpers — multi-image enrichment
+# ---------------------------------------------------------------------------
+
+
+async def ensure_images(
+    species_codes: list[str], min_count: int = 5
+) -> dict[str, list[BirdImage]]:
+    """Make sure each species has at least *min_count* images.
+
+    For any species below the threshold whose ``inat_taxon_id`` is set,
+    fetches additional CC-licensed photos from iNaturalist and appends
+    them to the bird document in Cosmos DB.
+
+    Returns a dict mapping species_code -> full images list.
+    """
+    container = get_birds_container()
+    result: dict[str, list[BirdImage]] = {}
+
+    # Load all requested birds in one cross-partition query
+    query = "SELECT * FROM c WHERE ARRAY_CONTAINS(@codes, c.species_code)"
+    params = [{"name": "@codes", "value": species_codes}]
+    docs = list(
+        container.query_items(
+            query=query, parameters=params, enable_cross_partition_query=True
+        )
+    )
+    doc_map = {d["species_code"]: d for d in docs}
+
+    for code in species_codes:
+        doc = doc_map.get(code)
+        if not doc:
+            continue
+
+        bird = Bird(**doc)
+        if len(bird.images) >= min_count or not bird.inat_taxon_id:
+            result[code] = bird.images
+            continue
+
+        # Fetch more photos from iNaturalist
+        needed = min_count - len(bird.images)
+        existing_urls = {img.url for img in bird.images}
+
+        new_photos = await fetch_photos(bird.inat_taxon_id, count=needed + 4)
+        added = 0
+        for photo in new_photos:
+            if photo.url in existing_urls:
+                continue
+            bird.images.append(photo)
+            existing_urls.add(photo.url)
+            added += 1
+            if added >= needed:
+                break
+
+        if added > 0:
+            doc["images"] = [img.model_dump() for img in bird.images]
+            container.upsert_item(body=doc)
+            logger.info(
+                "Enriched %s with %d iNat photos (%d total)",
+                code,
+                added,
+                len(bird.images),
+            )
+
+        result[code] = bird.images
+
+        # Respect iNaturalist rate limits (60 req/min)
+        await asyncio.sleep(1.0)
+
+    return result
+
+
+def query_birds_with_images(species_codes: list[str]) -> list[LookalikeBirdSummary]:
+    """Return bird summaries with all image URLs for lookalike mode."""
+    container = get_birds_container()
+
+    query = (
+        "SELECT c.id, c.species_code, c.sci_name, c.com_name, "
+        "c.family_code, c.family_com_name, c.images, c.wikipedia_url, "
+        "c.global_frequency, c.lookalikes "
+        "FROM c WHERE ARRAY_CONTAINS(@codes, c.species_code) "
+        "ORDER BY c.sort_order"
+    )
+    params = [{"name": "@codes", "value": species_codes}]
+    items = list(
+        container.query_items(
+            query=query, parameters=params, enable_cross_partition_query=True
+        )
+    )
+
+    results: list[LookalikeBirdSummary] = []
+    for item in items:
+        images = item.get("images", [])
+        image_url = ""
+        image_urls: list[str] = []
+        for img in images:
+            image_urls.append(img["url"])
+            if not image_url and img.get("is_primary"):
+                image_url = img["url"]
+        if not image_url and image_urls:
+            image_url = image_urls[0]
+
+        results.append(
+            LookalikeBirdSummary(
+                id=item["id"],
+                species_code=item["species_code"],
+                sci_name=item["sci_name"],
+                com_name=item["com_name"],
+                family_code=item["family_code"],
+                family_com_name=item["family_com_name"],
+                image_url=image_url,
+                image_urls=image_urls,
+                wikipedia_url=item.get("wikipedia_url", ""),
+                global_frequency=item.get("global_frequency", 0.0),
+                lookalike_count=len(item.get("lookalikes", [])),
+            )
+        )
+    return results

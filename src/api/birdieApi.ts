@@ -11,10 +11,10 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { Platform } from "react-native";
 import { BACKEND_URL } from "@env";
-import type { Bird, BirdSummary, BirdFamily, Region } from "../types/bird";
+import type { Bird, BirdSummary, BirdFamily, Region, LookalikeBirdSummary } from "../types/bird";
 import { useAuthStore, type UserProfile } from "../stores/authStore";
 
-export type { Bird, BirdSummary, BirdFamily, Region };
+export type { Bird, BirdSummary, BirdFamily, Region, LookalikeBirdSummary };
 
 // On web, default to same-origin (empty string) so API calls are relative.
 // On native, default to localhost for development.
@@ -190,6 +190,15 @@ export const createDeck = async (req: DeckRequest): Promise<BirdSummary[]> => {
   return res.data;
 };
 
+export const createLookalikeDeck = async (
+  speciesCodes: string[],
+): Promise<LookalikeBirdSummary[]> => {
+  const res = await birdieApi.post("/api/v1/birds/lookalike-deck", {
+    species_codes: speciesCodes,
+  });
+  return res.data;
+};
+
 // --- Chat messages ---
 
 export interface ChatMessage {
@@ -297,7 +306,7 @@ export const fetchCurrentUser = async (): Promise<UserProfile> => {
 export interface SavedDeckSummary {
   id: string;
   name: string;
-  deck_type: "dynamic" | "frozen";
+  deck_type: "dynamic" | "frozen" | "lookalike";
   filters: DeckFilters | null;
   species_count: number | null;
   created_at: string;
@@ -307,7 +316,7 @@ export interface SavedDeckSummary {
 export interface SavedDeck {
   id: string;
   name: string;
-  deck_type: "dynamic" | "frozen";
+  deck_type: "dynamic" | "frozen" | "lookalike";
   filters: DeckFilters | null;
   species_codes: string[] | null;
   created_at: string;
@@ -323,7 +332,7 @@ export interface DeckFilters {
 
 export interface SaveDeckRequest {
   name: string;
-  deck_type: "dynamic" | "frozen";
+  deck_type: "dynamic" | "frozen" | "lookalike";
   filters?: DeckFilters | null;
   species_codes?: string[] | null;
 }
@@ -355,7 +364,9 @@ export const deleteSavedDeck = async (deckId: string): Promise<void> => {
   await birdieApi.delete(`/api/v1/decks/${deckId}`);
 };
 
-export const playSavedDeck = async (deckId: string): Promise<BirdSummary[]> => {
+export const playSavedDeck = async (
+  deckId: string,
+): Promise<BirdSummary[] | LookalikeBirdSummary[]> => {
   const res = await birdieApi.post(`/api/v1/decks/${deckId}/play`);
   return res.data;
 };

@@ -47,6 +47,11 @@ export interface BirdSummary {
     lookalike_count: number;
 }
 
+/** Summary with all image URLs for lookalike mode */
+export interface LookalikeBirdSummary extends BirdSummary {
+    image_urls: string[];
+}
+
 export interface BirdFamily {
     family_code: string;
     family_com_name: string;

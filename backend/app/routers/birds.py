@@ -1,5 +1,6 @@
 """Bird data endpoints."""
 
+import asyncio
 import logging
 import re
 
@@ -9,12 +10,20 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.config import settings
-from app.models.bird import Bird, BirdSummary, DataVersion, FamilySummary
+from app.models.bird import (
+    Bird,
+    BirdSummary,
+    DataVersion,
+    FamilySummary,
+    LookalikeBirdSummary,
+)
 from app.services.bird_service import (
+    ensure_images,
     get_bird_by_species_code,
     get_data_version,
     get_unique_families,
     query_birds,
+    query_birds_with_images,
 )
 from app.services.difficulty_service import Difficulty, build_deck
 from app.services.ebird_service import get_region_frequency, get_species_list
@@ -40,7 +49,7 @@ def list_birds(
     species_codes: str | None = Query(
         None, description="Comma-separated species codes to filter by"
     ),
-    limit: int = Query(50, ge=1, le=500),
+    limit: int = Query(50, ge=1, le=2000),
     offset: int = Query(0, ge=0),
 ) -> list[BirdSummary]:
     """List birds with optional filters."""
@@ -172,6 +181,49 @@ async def create_deck(request: Request, req: DeckRequest) -> list[BirdSummary]:
         difficulty=req.difficulty,
         regional_freq=regional_freq,
     )
+
+
+class LookalikeDeckRequest(BaseModel):
+    """Request body for a lookalike game deck."""
+
+    species_codes: list[str] = Field(
+        ..., min_length=2, max_length=10, description="2–10 species codes to compare"
+    )
+
+    @field_validator("species_codes")
+    @classmethod
+    def validate_species_codes(cls, v: list[str]) -> list[str]:
+        for code in v:
+            if not _SPECIES_CODE_RE.match(code):
+                raise ValueError(f"Invalid species code: {code!r}")
+        if len(set(v)) != len(v):
+            raise ValueError("Duplicate species codes are not allowed")
+        return v
+
+
+@router.post("/lookalike-deck", response_model=list[LookalikeBirdSummary])
+@limiter.limit(settings.default_rate_limit)
+async def create_lookalike_deck(
+    request: Request, req: LookalikeDeckRequest
+) -> list[LookalikeBirdSummary]:
+    """Build a lookalike game deck with multiple images per species.
+
+    Ensures each species has at least 5 photos (fetching from iNaturalist
+    on-demand if needed) and returns all image URLs for random display.
+    """
+    # Warm up images (async — hits iNaturalist if needed)
+    await ensure_images(req.species_codes, min_count=5)
+
+    # Fetch birds with all image URLs (sync Cosmos query in threadpool)
+    loop = asyncio.get_event_loop()
+    birds = await loop.run_in_executor(
+        None, lambda: query_birds_with_images(req.species_codes)
+    )
+
+    if not birds:
+        raise HTTPException(status_code=404, detail="No matching birds found")
+
+    return birds
 
 
 @router.get("/{species_code}", response_model=Bird)

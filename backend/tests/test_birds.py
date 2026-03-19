@@ -80,7 +80,7 @@ class TestListBirds:
         assert resp.status_code == 422
 
     def test_list_birds_limit_too_large(self, client):
-        resp = client.get("/api/v1/birds?limit=999")
+        resp = client.get("/api/v1/birds?limit=9999")
         assert resp.status_code == 422
 
 

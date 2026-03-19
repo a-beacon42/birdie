@@ -24,6 +24,7 @@ from app.services.cosmos import get_birds_container
 from app.services.cosmos_init import ensure_containers
 from app.services.chat_service import close_http_client as close_chat_client
 from app.services.ebird_service import close_http_client as close_ebird_client
+from app.services.inaturalist_service import close_http_client as close_inat_client
 
 # ---------------------------------------------------------------------------
 #  Structured JSON logging with correlation IDs
@@ -165,6 +166,7 @@ async def lifespan(app: FastAPI):
     # Shutdown: close persistent HTTP clients
     await close_chat_client()
     await close_ebird_client()
+    await close_inat_client()
     logger.info("HTTP clients closed")
 
 
