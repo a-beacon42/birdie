@@ -125,6 +125,7 @@ birdieApi.interceptors.response.use(undefined, async (error: AxiosError) => {
 export const fetchBirds = async (params: {
   family?: string;
   species_codes?: string;
+  search?: string;
   limit?: number;
   offset?: number;
 }): Promise<BirdSummary[]> => {

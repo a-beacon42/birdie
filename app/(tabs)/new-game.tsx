@@ -5,10 +5,11 @@
  * Data flows from the backend API via hooks instead of bundled JSON.
  */
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
     View,
     Text,
+    TextInput,
     StyleSheet,
     ScrollView,
     Pressable,
@@ -18,10 +19,10 @@ import { useRouter } from "expo-router";
 import { showAlert } from "../../src/utils/alert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, radii, typography, shadows } from "../../src/theme";
-import { useFamilies, useSubnational1, useSubnational2, useBirds } from "../../src/hooks/useApi";
+import { useFamilies, useSubnational1, useSubnational2 } from "../../src/hooks/useApi";
 import { useGameStore } from "../../src/stores/gameStore";
 import { usePreferencesStore } from "../../src/stores/preferencesStore";
-import { createDeck, createLookalikeDeck } from "../../src/api/birdieApi";
+import { createDeck, createLookalikeDeck, fetchBirds } from "../../src/api/birdieApi";
 import type { Difficulty, LookalikeBirdSummary } from "../../src/api/birdieApi";
 import type { BirdFamily, BirdSummary, Region } from "../../src/types/bird";
 import SearchableDropdown from "../../src/components/SearchableDropdown";
@@ -75,15 +76,39 @@ export default function NewGameScreen() {
     const { data: subnational1 } = useSubnational1(selectedCountry || null);
     const { data: subnational2 } = useSubnational2(selectedState || null);
 
-    // All birds for lookalike species search (loaded lazily when in lookalikes mode)
-    const { data: allBirds, loading: birdsLoading } = useBirds(
-        { limit: 2000 },
-    );
+    // Debounced server-side bird search for lookalike species picker
+    const [birdSearchText, setBirdSearchText] = useState("");
+    const [birdSearchResults, setBirdSearchResults] = useState<BirdSummary[]>([]);
+    const [birdSearchLoading, setBirdSearchLoading] = useState(false);
+    const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Filter out already-selected species from the search list
-    const availableBirds = (allBirds ?? []).filter(
-        (b) => !selectedLookalikeSpecies.includes(b.species_code),
-    );
+    useEffect(() => {
+        if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+
+        if (!birdSearchText || birdSearchText.length < 2) {
+            setBirdSearchResults([]);
+            setBirdSearchLoading(false);
+            return;
+        }
+
+        setBirdSearchLoading(true);
+        searchTimerRef.current = setTimeout(async () => {
+            try {
+                const results = await fetchBirds({ search: birdSearchText, limit: 20 });
+                setBirdSearchResults(
+                    results.filter((b) => !selectedLookalikeSpecies.includes(b.species_code)),
+                );
+            } catch {
+                setBirdSearchResults([]);
+            } finally {
+                setBirdSearchLoading(false);
+            }
+        }, 300);
+
+        return () => {
+            if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+        };
+    }, [birdSearchText, selectedLookalikeSpecies]);
 
     const handleCountryChange = useCallback(
         (item: Country) => {
@@ -110,6 +135,8 @@ export default function NewGameScreen() {
                 ...prev,
                 [bird.species_code]: bird.com_name,
             }));
+            setBirdSearchText("");
+            setBirdSearchResults([]);
         },
         [selectedLookalikeSpecies, setSelectedLookalikeSpecies],
     );
@@ -143,31 +170,24 @@ export default function NewGameScreen() {
                     return;
                 }
 
-                // Build image URLs map and expand birds for the requested card count
+                // Build image URLs map
                 const imageUrlsMap: Record<string, string[]> = {};
                 for (const bird of lookalikeData) {
                     imageUrlsMap[bird.species_code] = bird.image_urls;
                 }
 
-                // Create N cards per species, cycling through the full set
-                const expandedBirds: BirdSummary[] = [];
-                const perSpecies = Math.max(1, Math.floor(cardCount / lookalikeData.length));
-                for (const bird of lookalikeData) {
-                    for (let i = 0; i < perSpecies; i++) {
-                        expandedBirds.push(bird);
-                    }
-                }
-                // Shuffle
-                for (let i = expandedBirds.length - 1; i > 0; i--) {
+                // Shuffle species order
+                const shuffled = [...lookalikeData];
+                for (let i = shuffled.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [expandedBirds[i], expandedBirds[j]] = [expandedBirds[j], expandedBirds[i]];
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
                 }
 
                 const speciesLabel = lookalikeData
                     .map((b) => b.com_name)
                     .join(" vs ");
 
-                startLookalikeGame(expandedBirds, imageUrlsMap, {
+                startLookalikeGame(shuffled, imageUrlsMap, {
                     familyLabel: speciesLabel,
                 });
                 router.push("/game");
@@ -391,23 +411,42 @@ export default function NewGameScreen() {
                         <>
                             {/* Species search */}
                             <SectionHeader label="Select species to compare (2–10)" />
-                            {birdsLoading ? (
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Search by common name..."
+                                placeholderTextColor={colors.textMuted}
+                                value={birdSearchText}
+                                onChangeText={setBirdSearchText}
+                                autoCorrect={false}
+                                accessibilityLabel="Search birds"
+                            />
+                            {birdSearchLoading && (
                                 <ActivityIndicator
                                     color={colors.primary}
-                                    style={{ marginVertical: spacing.sm }}
+                                    size="small"
+                                    style={{ marginVertical: spacing.xs }}
                                 />
-                            ) : (
-                                <SearchableDropdown<BirdSummary>
-                                    label="Search birds"
-                                    data={availableBirds}
-                                    labelField="com_name"
-                                    valueField="species_code"
-                                    placeholder="Type a bird name..."
-                                    value={null}
-                                    onChange={handleAddLookalikeSpecies}
-                                    search
-                                    searchPlaceholder="Search by common name"
-                                />
+                            )}
+                            {birdSearchResults.length > 0 && (
+                                <View style={styles.searchResultsList}>
+                                    {birdSearchResults.map((bird) => (
+                                        <Pressable
+                                            key={bird.species_code}
+                                            style={({ pressed }) => [
+                                                styles.searchResultItem,
+                                                pressed && styles.searchResultItemPressed,
+                                            ]}
+                                            onPress={() => handleAddLookalikeSpecies(bird)}
+                                        >
+                                            <Text style={styles.searchResultText}>
+                                                {bird.com_name}
+                                            </Text>
+                                            <Text style={styles.searchResultSci}>
+                                                {bird.sci_name}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
                             )}
 
                             {/* Selected species tags */}
@@ -602,5 +641,41 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         textAlign: "center",
         marginTop: spacing.sm,
+    },
+    searchInput: {
+        ...typography.body,
+        color: colors.text,
+        backgroundColor: colors.background,
+        borderWidth: 1.5,
+        borderColor: colors.border,
+        borderRadius: radii.md,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+    },
+    searchResultsList: {
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: radii.md,
+        marginTop: spacing.xs,
+        maxHeight: 200,
+        overflow: "hidden",
+    },
+    searchResultItem: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: colors.border,
+    },
+    searchResultItemPressed: {
+        backgroundColor: colors.primary + "15",
+    },
+    searchResultText: {
+        ...typography.body,
+        color: colors.text,
+    },
+    searchResultSci: {
+        ...typography.caption,
+        color: colors.textMuted,
     },
 });
