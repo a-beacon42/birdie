@@ -170,24 +170,31 @@ export default function NewGameScreen() {
                     return;
                 }
 
-                // Build image URLs map
+                // Build image URLs map and expand birds for the requested card count
                 const imageUrlsMap: Record<string, string[]> = {};
                 for (const bird of lookalikeData) {
                     imageUrlsMap[bird.species_code] = bird.image_urls;
                 }
 
-                // Shuffle species order
-                const shuffled = [...lookalikeData];
-                for (let i = shuffled.length - 1; i > 0; i--) {
+                // Create N cards per species, cycling through the full set
+                const expandedBirds: BirdSummary[] = [];
+                const perSpecies = Math.max(1, Math.floor(cardCount / lookalikeData.length));
+                for (const bird of lookalikeData) {
+                    for (let i = 0; i < perSpecies; i++) {
+                        expandedBirds.push(bird);
+                    }
+                }
+                // Shuffle
+                for (let i = expandedBirds.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    [expandedBirds[i], expandedBirds[j]] = [expandedBirds[j], expandedBirds[i]];
                 }
 
                 const speciesLabel = lookalikeData
                     .map((b) => b.com_name)
                     .join(" vs ");
 
-                startLookalikeGame(shuffled, imageUrlsMap, {
+                startLookalikeGame(expandedBirds, imageUrlsMap, {
                     familyLabel: speciesLabel,
                 });
                 router.push("/game");

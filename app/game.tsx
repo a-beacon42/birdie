@@ -38,6 +38,7 @@ export default function GameScreen() {
   );
   const {
     birds,
+    cardIds,
     currentIndex,
     goToIndex,
     resetGame,
@@ -61,13 +62,14 @@ export default function GameScreen() {
 
   // ---- Derived ----
   const deckSize = birds.length;
-  const answeredCodes = useMemo(
-    () => new Set(answers.map((a) => a.speciesCode)),
+  const answeredCardIds = useMemo(
+    () => new Set(answers.map((a) => a.cardId)),
     [answers],
   );
-  const allAnswered = deckSize > 0 && answeredCodes.size >= deckSize;
+  const allAnswered = deckSize > 0 && answeredCardIds.size >= deckSize;
   const currentBird = birds[currentIndex] ?? null;
-  const remaining = deckSize - answeredCodes.size;
+  const currentCardId = cardIds[currentIndex] ?? null;
+  const remaining = deckSize - answeredCardIds.size;
 
   // Memoize score counts to avoid re-filtering on every render
   const { correctCount, incorrectCount, skippedCount } = useMemo(() => {
@@ -82,26 +84,26 @@ export default function GameScreen() {
 
   // Position of current bird within the unanswered subset
   const unansweredPosition = useMemo(() => {
-    if (!currentBird || answeredCodes.has(currentBird.species_code)) return 0;
+    if (!currentCardId || answeredCardIds.has(currentCardId)) return 0;
     let pos = 0;
-    for (const b of birds) {
-      if (answeredCodes.has(b.species_code)) continue;
+    for (let i = 0; i < cardIds.length; i++) {
+      if (answeredCardIds.has(cardIds[i])) continue;
       pos++;
-      if (b.species_code === currentBird.species_code) return pos;
+      if (cardIds[i] === currentCardId) return pos;
     }
     return 0;
-  }, [birds, currentBird, answeredCodes]);
+  }, [cardIds, currentCardId, answeredCardIds]);
 
   // ---- Helpers: find next/prev unanswered bird ----
   const findUnanswered = useCallback(
     (from: number, dir: 1 | -1): number => {
       for (let i = 1; i <= deckSize; i++) {
         const idx = (from + i * dir + deckSize) % deckSize;
-        if (!answeredCodes.has(birds[idx].species_code)) return idx;
+        if (!answeredCardIds.has(cardIds[idx])) return idx;
       }
       return -1;
     },
-    [birds, deckSize, answeredCodes],
+    [cardIds, deckSize, answeredCardIds],
   );
 
   // ---- Per-card timer (resets when displayed bird changes) ----
@@ -121,19 +123,19 @@ export default function GameScreen() {
 
   // ---- Answer handlers ----
   const handleCorrect = useCallback(() => {
-    if (!currentBird) return;
-    recordAnswer(currentBird.species_code, "correct", Date.now() - cardStartTime.current);
-  }, [currentBird, recordAnswer]);
+    if (!currentBird || !currentCardId) return;
+    recordAnswer(currentCardId, currentBird.species_code, "correct", Date.now() - cardStartTime.current);
+  }, [currentBird, currentCardId, recordAnswer]);
 
   const handleIncorrect = useCallback(() => {
-    if (!currentBird) return;
-    recordAnswer(currentBird.species_code, "incorrect", Date.now() - cardStartTime.current);
-  }, [currentBird, recordAnswer]);
+    if (!currentBird || !currentCardId) return;
+    recordAnswer(currentCardId, currentBird.species_code, "incorrect", Date.now() - cardStartTime.current);
+  }, [currentBird, currentCardId, recordAnswer]);
 
   const handleSkip = useCallback(() => {
-    if (!currentBird) return;
-    recordAnswer(currentBird.species_code, "skipped", Date.now() - cardStartTime.current);
-  }, [currentBird, recordAnswer]);
+    if (!currentBird || !currentCardId) return;
+    recordAnswer(currentCardId, currentBird.species_code, "skipped", Date.now() - cardStartTime.current);
+  }, [currentBird, currentCardId, recordAnswer]);
 
   const handleShowResults = useCallback(() => {
     markUnansweredAsSkipped();
@@ -179,7 +181,7 @@ export default function GameScreen() {
 
   // ---- Auto-advance past answered cards ----
   useEffect(() => {
-    if (currentBird && answeredCodes.has(currentBird.species_code)) {
+    if (currentCardId && answeredCardIds.has(currentCardId)) {
       if (allAnswered) {
         // Use handleShowResults so the session is submitted (not just setShowResults)
         if (!showResults) handleShowResults();
@@ -188,7 +190,7 @@ export default function GameScreen() {
         if (next !== -1) goToIndex(next);
       }
     }
-  }, [currentBird, answeredCodes, allAnswered, showResults, currentIndex, findUnanswered, goToIndex, handleShowResults]);
+  }, [currentCardId, answeredCardIds, allAnswered, showResults, currentIndex, findUnanswered, goToIndex, handleShowResults]);
 
   const handleResetGame = useCallback(() => {
     clearAnswers();
