@@ -3,11 +3,12 @@
 import time
 import uuid
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import jwt
 import pytest
 from azure.cosmos.exceptions import CosmosResourceNotFoundError
+from app.models.bird import LookalikeBirdSummary
 
 # ---------------------------------------------------------------------------
 #  Deterministic test encryption key
@@ -596,6 +597,61 @@ class TestPlayDeckEndpoint:
             "/api/v1/decks/nonexistent/play", headers=self._auth_headers()
         )
         assert resp.status_code == 404
+
+    def test_play_lookalike_deck_uses_requested_card_count(self, client, mock_containers):
+        decks, _ = mock_containers
+        decks.read_item.return_value = {
+            "id": "deck1",
+            "user_id": "testuser123",
+            "name": "Lookalike Set",
+            "deck_type": "lookalike",
+            "filters": None,
+            "species_codes": ["coohaw", "shshaw"],
+            "created_at": "2026-03-01T00:00:00+00:00",
+            "last_played_at": None,
+        }
+
+        with (
+            patch(
+                "app.routers.decks.ensure_images",
+                new_callable=AsyncMock,
+                return_value={},
+            ) as ensure_images_mock,
+            patch(
+                "app.routers.decks.query_birds_with_images",
+                return_value=[
+                    LookalikeBirdSummary(
+                        id="coohaw",
+                        species_code="coohaw",
+                        sci_name="Accipiter cooperii",
+                        com_name="Cooper's Hawk",
+                        family_code="Accipitridae",
+                        family_com_name="Hawks",
+                        image_url="https://example.com/coo-1.jpg",
+                        image_urls=["https://example.com/coo-1.jpg"],
+                    ),
+                    LookalikeBirdSummary(
+                        id="shshaw",
+                        species_code="shshaw",
+                        sci_name="Accipiter striatus",
+                        com_name="Sharp-shinned Hawk",
+                        family_code="Accipitridae",
+                        family_com_name="Hawks",
+                        image_url="https://example.com/sha-1.jpg",
+                        image_urls=["https://example.com/sha-1.jpg"],
+                    ),
+                ],
+            ),
+        ):
+            resp = client.post(
+                "/api/v1/decks/deck1/play?card_count=25",
+                headers=self._auth_headers(),
+            )
+            assert resp.status_code == 200
+            ensure_images_mock.assert_awaited_once_with(
+                ["coohaw", "shshaw"],
+                min_count=13,
+            )
 
     def test_play_requires_auth(self, client, mock_containers):
         resp = client.post("/api/v1/decks/deck1/play")

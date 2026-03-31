@@ -22,14 +22,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radii, typography, shadows } from "../../src/theme";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useGameStore } from "../../src/stores/gameStore";
+import { usePreferencesStore } from "../../src/stores/preferencesStore";
 import {
     fetchOverview,
     fetchSavedDecks,
     playSavedDeck,
+    type LookalikeBirdSummary,
     type OverviewStats,
     type SavedDeckSummary,
 } from "../../src/api/birdieApi";
 import { showAlert } from "../../src/utils/alert";
+import { buildLookalikeDeck } from "../../src/utils/lookalikes";
 
 /** How many saved decks to show on the home screen before "See all". */
 const MAX_DECKS_SHOWN = 3;
@@ -41,6 +44,8 @@ export default function HomeScreen() {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const loggedIn = !!token && !!user;
     const startGame = useGameStore((s) => s.startGame);
+    const startLookalikeGame = useGameStore((s) => s.startLookalikeGame);
+    const cardCount = usePreferencesStore((s) => s.cardCount);
 
     const [overview, setOverview] = useState<OverviewStats | null>(null);
     const [decks, setDecks] = useState<SavedDeckSummary[]>([]);
@@ -87,7 +92,7 @@ export default function HomeScreen() {
         async (deck: SavedDeckSummary) => {
             setPlayingId(deck.id);
             try {
-                const birds = await playSavedDeck(deck.id);
+                const birds = await playSavedDeck(deck.id, cardCount);
                 if (birds.length === 0) {
                     showAlert(
                         "Empty deck",
@@ -95,7 +100,22 @@ export default function HomeScreen() {
                     );
                     return;
                 }
-                startGame(birds, "flashcard", {});
+                if (deck.deck_type === "lookalike") {
+                    const lookalikes = birds as LookalikeBirdSummary[];
+                    const { birds: expandedBirds, imageUrlsMap } = buildLookalikeDeck(
+                        lookalikes,
+                        cardCount,
+                    );
+                    if (expandedBirds.length === 0) {
+                        showAlert("Empty deck", "No birds found for this lookalike deck.");
+                        return;
+                    }
+                    startLookalikeGame(expandedBirds, imageUrlsMap, {
+                        familyLabel: lookalikes.map((bird) => bird.com_name).join(" vs "),
+                    });
+                } else {
+                    startGame(birds, "flashcard", {});
+                }
                 router.push("/game");
             } catch (err: unknown) {
                 showAlert(
@@ -106,7 +126,7 @@ export default function HomeScreen() {
                 setPlayingId(null);
             }
         },
-        [startGame, router],
+        [cardCount, startGame, startLookalikeGame, router],
     );
 
     const memberSince = user
