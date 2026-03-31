@@ -216,7 +216,7 @@ async def create_lookalike_deck(
     on-demand if needed) and returns all image URLs for random display.
     """
     # Warm up images (async — hits iNaturalist if needed)
-    await ensure_images(req.species_codes, min_count=5)
+    await ensure_images(req.species_codes, min_count=10)
 
     # Fetch birds with all image URLs (sync Cosmos query in threadpool)
     loop = asyncio.get_event_loop()

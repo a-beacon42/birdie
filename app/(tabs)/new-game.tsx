@@ -170,21 +170,36 @@ export default function NewGameScreen() {
                     return;
                 }
 
-                // Build image URLs map and expand birds for the requested card count
+                // Build image URLs map for the game store
                 const imageUrlsMap: Record<string, string[]> = {};
                 for (const bird of lookalikeData) {
                     imageUrlsMap[bird.species_code] = bird.image_urls;
                 }
 
-                // Create N cards per species, cycling through the full set
+                // Expand birds to fill the requested card count, assigning
+                // a unique photo to each card via round-robin over a
+                // shuffled copy of the species' image pool.
                 const expandedBirds: BirdSummary[] = [];
                 const perSpecies = Math.max(1, Math.floor(cardCount / lookalikeData.length));
+
                 for (const bird of lookalikeData) {
+                    // Shuffle photo pool for this species
+                    const pool = [...bird.image_urls];
+                    for (let k = pool.length - 1; k > 0; k--) {
+                        const r = Math.floor(Math.random() * (k + 1));
+                        [pool[k], pool[r]] = [pool[r], pool[k]];
+                    }
+
                     for (let i = 0; i < perSpecies; i++) {
-                        expandedBirds.push(bird);
+                        // Round-robin: cycle through the shuffled pool
+                        const photoUrl = pool.length > 0
+                            ? pool[i % pool.length]
+                            : bird.image_url;
+                        expandedBirds.push({ ...bird, image_url: photoUrl });
                     }
                 }
-                // Shuffle
+
+                // Shuffle the full deck
                 for (let i = expandedBirds.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [expandedBirds[i], expandedBirds[j]] = [expandedBirds[j], expandedBirds[i]];
