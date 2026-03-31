@@ -346,18 +346,25 @@ class TestLookalikeDeckEndpoint:
                 "app.routers.birds.ensure_images",
                 new_callable=AsyncMock,
                 return_value={},
-            ),
+            ) as ensure_images_mock,
             patch("app.routers.birds.query_birds_with_images", return_value=summaries),
         ):
             resp = client.post(
                 "/api/v1/birds/lookalike-deck",
-                json={"species_codes": ["bird0", "bird1", "bird2"]},
+                json={
+                    "species_codes": ["bird0", "bird1", "bird2"],
+                    "card_count": 25,
+                },
             )
             assert resp.status_code == 200
             data = resp.json()
             assert len(data) == 3
             assert "image_urls" in data[0]
             assert len(data[0]["image_urls"]) == 5
+            ensure_images_mock.assert_awaited_once_with(
+                ["bird0", "bird1", "bird2"],
+                min_count=9,
+            )
 
     def test_rejects_single_species(self, client):
         resp = client.post(

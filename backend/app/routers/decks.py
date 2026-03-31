@@ -6,8 +6,9 @@ Tier limits (max saved decks) are enforced server-side by the deck service.
 
 import asyncio
 import logging
+import math
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -145,6 +146,12 @@ def delete(
 async def play(
     request: Request,
     deck_id: str,
+    card_count: int | None = Query(
+        None,
+        ge=1,
+        le=100,
+        description="Requested replay deck size so lookalike decks can load enough unique images",
+    ),
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> list[BirdSummary] | list[LookalikeBirdSummary]:
     """Generate a playable deck from a saved configuration.
@@ -165,7 +172,10 @@ async def play(
 
     if deck.deck_type == "lookalike" and deck.species_codes:
         # Lookalike: ensure images then return with all image URLs
-        await ensure_images(deck.species_codes, min_count=5)
+        min_count = 5
+        if card_count is not None:
+            min_count = max(5, math.ceil(card_count / len(deck.species_codes)))
+        await ensure_images(deck.species_codes, min_count=min_count)
         birds = await loop.run_in_executor(
             None, lambda: query_birds_with_images(deck.species_codes)  # type: ignore
         )

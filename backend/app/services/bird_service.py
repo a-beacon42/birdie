@@ -29,6 +29,28 @@ _VERSION_TTL: float = 3600  # refresh once per hour
 logger = logging.getLogger(__name__)
 
 
+def _unique_image_urls(images: list[dict]) -> tuple[str, list[str]]:
+    """Return a primary URL plus a de-duplicated URL list in document order."""
+    primary_url = ""
+    image_urls: list[str] = []
+    seen_urls: set[str] = set()
+
+    for img in images:
+        url = img.get("url", "")
+        if not url or url in seen_urls:
+            continue
+
+        seen_urls.add(url)
+        image_urls.append(url)
+        if not primary_url and img.get("is_primary"):
+            primary_url = url
+
+    if not primary_url and image_urls:
+        primary_url = image_urls[0]
+
+    return primary_url, image_urls
+
+
 def query_birds(
     family_code: str | None = None,
     species_codes: list[str] | None = None,
@@ -295,14 +317,7 @@ def query_birds_with_images(species_codes: list[str]) -> list[LookalikeBirdSumma
     results: list[LookalikeBirdSummary] = []
     for item in items:
         images = item.get("images", [])
-        image_url = ""
-        image_urls: list[str] = []
-        for img in images:
-            image_urls.append(img["url"])
-            if not image_url and img.get("is_primary"):
-                image_url = img["url"]
-        if not image_url and image_urls:
-            image_url = image_urls[0]
+        image_url, image_urls = _unique_image_urls(images)
 
         results.append(
             LookalikeBirdSummary(

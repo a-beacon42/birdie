@@ -193,9 +193,11 @@ export const createDeck = async (req: DeckRequest): Promise<BirdSummary[]> => {
 
 export const createLookalikeDeck = async (
   speciesCodes: string[],
+  cardCount?: number,
 ): Promise<LookalikeBirdSummary[]> => {
   const res = await birdieApi.post("/api/v1/birds/lookalike-deck", {
     species_codes: speciesCodes,
+    card_count: cardCount,
   });
   return res.data;
 };
@@ -367,8 +369,15 @@ export const deleteSavedDeck = async (deckId: string): Promise<void> => {
 
 export const playSavedDeck = async (
   deckId: string,
+  cardCount?: number,
 ): Promise<BirdSummary[] | LookalikeBirdSummary[]> => {
-  const res = await birdieApi.post(`/api/v1/decks/${deckId}/play`);
+  const res = await birdieApi.post(
+    `/api/v1/decks/${deckId}/play`,
+    null,
+    {
+      params: cardCount ? { card_count: cardCount } : undefined,
+    },
+  );
   return res.data;
 };
 

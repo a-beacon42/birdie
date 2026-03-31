@@ -20,6 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, radii, typography, shadows } from "../src/theme";
 import { useAuthStore } from "../src/stores/authStore";
 import { useGameStore } from "../src/stores/gameStore";
+import { usePreferencesStore } from "../src/stores/preferencesStore";
 import {
     fetchSavedDecks,
     playSavedDeck,
@@ -28,6 +29,7 @@ import {
     type LookalikeBirdSummary,
 } from "../src/api/birdieApi";
 import { showAlert } from "../src/utils/alert";
+import { buildLookalikeDeck } from "../src/utils/lookalikes";
 
 export default function DecksScreen() {
     const router = useRouter();
@@ -35,6 +37,7 @@ export default function DecksScreen() {
     const user = useAuthStore((s) => s.user);
     const startGame = useGameStore((s) => s.startGame);
     const startLookalikeGame = useGameStore((s) => s.startLookalikeGame);
+    const cardCount = usePreferencesStore((s) => s.cardCount);
 
     const [decks, setDecks] = useState<SavedDeckSummary[]>([]);
     const [loading, setLoading] = useState(true);
@@ -69,18 +72,24 @@ export default function DecksScreen() {
     const handlePlay = useCallback(async (deck: SavedDeckSummary) => {
         setPlayingId(deck.id);
         try {
-            const birds = await playSavedDeck(deck.id);
+            const birds = await playSavedDeck(deck.id, cardCount);
             if (birds.length === 0) {
                 showAlert("Empty deck", "No birds found for this deck configuration.");
                 return;
             }
             if (deck.deck_type === "lookalike") {
                 const lookalikes = birds as LookalikeBirdSummary[];
-                const imageUrlsMap: Record<string, string[]> = {};
-                for (const b of lookalikes) {
-                    imageUrlsMap[b.species_code] = b.image_urls;
+                const { birds: expandedBirds, imageUrlsMap } = buildLookalikeDeck(
+                    lookalikes,
+                    cardCount,
+                );
+                if (expandedBirds.length === 0) {
+                    showAlert("Empty deck", "No birds found for this lookalike deck.");
+                    return;
                 }
-                startLookalikeGame(lookalikes, imageUrlsMap);
+                startLookalikeGame(expandedBirds, imageUrlsMap, {
+                    familyLabel: lookalikes.map((bird) => bird.com_name).join(" vs "),
+                });
             } else {
                 startGame(birds, "flashcard", {});
             }
@@ -90,7 +99,7 @@ export default function DecksScreen() {
         } finally {
             setPlayingId(null);
         }
-    }, [startGame, startLookalikeGame, router]);
+    }, [cardCount, startGame, startLookalikeGame, router]);
 
     const handleDelete = useCallback(async (deck: SavedDeckSummary) => {
         try {

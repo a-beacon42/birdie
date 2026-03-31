@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import math
 import re
 
 from fastapi import APIRouter, HTTPException, Path, Query, Request
@@ -193,6 +194,12 @@ class LookalikeDeckRequest(BaseModel):
     species_codes: list[str] = Field(
         ..., min_length=2, max_length=10, description="2–10 species codes to compare"
     )
+    card_count: int = Field(
+        25,
+        ge=1,
+        le=100,
+        description="Requested deck size so the API can prepare enough unique images",
+    )
 
     @field_validator("species_codes")
     @classmethod
@@ -215,8 +222,9 @@ async def create_lookalike_deck(
     Ensures each species has at least 5 photos (fetching from iNaturalist
     on-demand if needed) and returns all image URLs for random display.
     """
-    # Warm up images (async — hits iNaturalist if needed)
-    await ensure_images(req.species_codes, min_count=10)
+    # Warm up enough images to minimize repeats in the requested deck size.
+    min_count = max(5, math.ceil(req.card_count / len(req.species_codes)))
+    await ensure_images(req.species_codes, min_count=min_count)
 
     # Fetch birds with all image URLs (sync Cosmos query in threadpool)
     loop = asyncio.get_event_loop()

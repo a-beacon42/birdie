@@ -23,10 +23,16 @@ import { useFamilies, useSubnational1, useSubnational2 } from "../../src/hooks/u
 import { useGameStore } from "../../src/stores/gameStore";
 import { usePreferencesStore } from "../../src/stores/preferencesStore";
 import { createDeck, createLookalikeDeck, fetchBirds } from "../../src/api/birdieApi";
-import type { Difficulty, LookalikeBirdSummary } from "../../src/api/birdieApi";
+import type { Difficulty } from "../../src/api/birdieApi";
 import type { BirdFamily, BirdSummary, Region } from "../../src/types/bird";
 import SearchableDropdown from "../../src/components/SearchableDropdown";
 import allCountries from "../../src/data/AllCountries.json";
+import {
+    buildLookalikeDeck,
+    findExactBirdMatch,
+    LOOKALIKE_SUGGESTIONS,
+    type LookalikeSuggestion,
+} from "../../src/utils/lookalikes";
 
 type Country = { name: string; code: string };
 
@@ -80,6 +86,7 @@ export default function NewGameScreen() {
     const [birdSearchText, setBirdSearchText] = useState("");
     const [birdSearchResults, setBirdSearchResults] = useState<BirdSummary[]>([]);
     const [birdSearchLoading, setBirdSearchLoading] = useState(false);
+    const [suggestionLoadingId, setSuggestionLoadingId] = useState<string | null>(null);
     const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -109,6 +116,39 @@ export default function NewGameScreen() {
             if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
         };
     }, [birdSearchText, selectedLookalikeSpecies]);
+
+    useEffect(() => {
+        const missingCodes = selectedLookalikeSpecies.filter(
+            (code) => !selectedSpeciesNames[code],
+        );
+        if (missingCodes.length === 0) return;
+
+        let cancelled = false;
+
+        void (async () => {
+            try {
+                const results = await fetchBirds({
+                    species_codes: missingCodes.join(","),
+                    limit: missingCodes.length,
+                });
+                if (cancelled || results.length === 0) return;
+
+                setSelectedSpeciesNames((prev) => {
+                    const next = { ...prev };
+                    for (const bird of results) {
+                        next[bird.species_code] = bird.com_name;
+                    }
+                    return next;
+                });
+            } catch {
+                // Leave unresolved codes as-is in the selected tags.
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedLookalikeSpecies, selectedSpeciesNames]);
 
     const handleCountryChange = useCallback(
         (item: Country) => {
@@ -150,6 +190,53 @@ export default function NewGameScreen() {
         [selectedLookalikeSpecies, setSelectedLookalikeSpecies],
     );
 
+    const handleApplyLookalikeSuggestion = useCallback(
+        async (suggestion: LookalikeSuggestion) => {
+            setSuggestionLoadingId(suggestion.id);
+            try {
+                const resolvedBirds = await Promise.all(
+                    suggestion.speciesNames.map(async (speciesName) => {
+                        const results = await fetchBirds({
+                            search: speciesName,
+                            limit: 10,
+                        });
+                        return findExactBirdMatch(results, speciesName);
+                    }),
+                );
+
+                const birds = resolvedBirds.filter(
+                    (bird): bird is BirdSummary => bird != null,
+                );
+
+                if (birds.length !== suggestion.speciesNames.length) {
+                    showAlert(
+                        "Suggestion unavailable",
+                        "One or more birds in that suggested deck could not be loaded.",
+                    );
+                    return;
+                }
+
+                setSelectedLookalikeSpecies(birds.map((bird) => bird.species_code));
+                setSelectedSpeciesNames((prev) => ({
+                    ...prev,
+                    ...Object.fromEntries(
+                        birds.map((bird) => [bird.species_code, bird.com_name]),
+                    ),
+                }));
+                setBirdSearchText("");
+                setBirdSearchResults([]);
+            } catch {
+                showAlert(
+                    "Suggestion unavailable",
+                    "That suggested lookalike deck could not be loaded right now.",
+                );
+            } finally {
+                setSuggestionLoadingId(null);
+            }
+        },
+        [setSelectedLookalikeSpecies],
+    );
+
     // --- Create game handlers ---
 
     const handleCreateGame = useCallback(async () => {
@@ -162,7 +249,10 @@ export default function NewGameScreen() {
                     return;
                 }
 
-                const lookalikeData = await createLookalikeDeck(selectedLookalikeSpecies);
+                const lookalikeData = await createLookalikeDeck(
+                    selectedLookalikeSpecies,
+                    cardCount,
+                );
 
                 if (lookalikeData.length === 0) {
                     showAlert("No birds found", "Try different species.");
@@ -170,40 +260,10 @@ export default function NewGameScreen() {
                     return;
                 }
 
-                // Build image URLs map for the game store
-                const imageUrlsMap: Record<string, string[]> = {};
-                for (const bird of lookalikeData) {
-                    imageUrlsMap[bird.species_code] = bird.image_urls;
-                }
-
-                // Expand birds to fill the requested card count, assigning
-                // a unique photo to each card via round-robin over a
-                // shuffled copy of the species' image pool.
-                const expandedBirds: BirdSummary[] = [];
-                const perSpecies = Math.max(1, Math.floor(cardCount / lookalikeData.length));
-
-                for (const bird of lookalikeData) {
-                    // Shuffle photo pool for this species
-                    const pool = [...bird.image_urls];
-                    for (let k = pool.length - 1; k > 0; k--) {
-                        const r = Math.floor(Math.random() * (k + 1));
-                        [pool[k], pool[r]] = [pool[r], pool[k]];
-                    }
-
-                    for (let i = 0; i < perSpecies; i++) {
-                        // Round-robin: cycle through the shuffled pool
-                        const photoUrl = pool.length > 0
-                            ? pool[i % pool.length]
-                            : bird.image_url;
-                        expandedBirds.push({ ...bird, image_url: photoUrl });
-                    }
-                }
-
-                // Shuffle the full deck
-                for (let i = expandedBirds.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [expandedBirds[i], expandedBirds[j]] = [expandedBirds[j], expandedBirds[i]];
-                }
+                const { birds: expandedBirds, imageUrlsMap } = buildLookalikeDeck(
+                    lookalikeData,
+                    cardCount,
+                );
 
                 const speciesLabel = lookalikeData
                     .map((b) => b.com_name)
@@ -281,6 +341,9 @@ export default function NewGameScreen() {
 
     const handleClearFilters = useCallback(() => {
         clearAll();
+        setSelectedSpeciesNames({});
+        setBirdSearchText("");
+        setBirdSearchResults([]);
     }, [clearAll]);
 
     return (
@@ -431,6 +494,47 @@ export default function NewGameScreen() {
 
                     {gameMode === "lookalikes" && (
                         <>
+                            <SectionHeader label="Suggested decks" />
+                            <Text style={styles.lookalikeHint}>
+                                Start with a preset, then add or remove species below if you
+                                want to customize it.
+                            </Text>
+                            <View style={styles.suggestionList}>
+                                {LOOKALIKE_SUGGESTIONS.map((suggestion) => (
+                                    <Pressable
+                                        key={suggestion.id}
+                                        style={({ pressed }) => [
+                                            styles.suggestionCard,
+                                            pressed && styles.suggestionCardPressed,
+                                        ]}
+                                        onPress={() => handleApplyLookalikeSuggestion(suggestion)}
+                                        disabled={suggestionLoadingId != null}
+                                    >
+                                        <View style={styles.suggestionHeader}>
+                                            <Text style={styles.suggestionTitle}>
+                                                {suggestion.title}
+                                            </Text>
+                                            {suggestionLoadingId === suggestion.id ? (
+                                                <ActivityIndicator
+                                                    size="small"
+                                                    color={colors.primary}
+                                                />
+                                            ) : (
+                                                <Text style={styles.suggestionAction}>
+                                                    Use deck
+                                                </Text>
+                                            )}
+                                        </View>
+                                        <Text style={styles.suggestionDescription}>
+                                            {suggestion.description}
+                                        </Text>
+                                        <Text style={styles.suggestionSpecies}>
+                                            {suggestion.speciesNames.join(" • ")}
+                                        </Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+
                             {/* Species search */}
                             <SectionHeader label="Select species to compare (2–10)" />
                             <TextInput
@@ -633,6 +737,50 @@ const styles = StyleSheet.create({
         color: colors.error,
         textAlign: "center",
         marginVertical: spacing.sm,
+    },
+    lookalikeHint: {
+        ...typography.bodySmall,
+        color: colors.textSecondary,
+        marginBottom: spacing.sm,
+    },
+    suggestionList: {
+        gap: spacing.sm,
+    },
+    suggestionCard: {
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: radii.md,
+        padding: spacing.md,
+        gap: spacing.xs,
+    },
+    suggestionCardPressed: {
+        borderColor: colors.primary,
+        backgroundColor: colors.primary + "10",
+    },
+    suggestionHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: spacing.sm,
+    },
+    suggestionTitle: {
+        ...typography.label,
+        color: colors.text,
+        flex: 1,
+    },
+    suggestionAction: {
+        ...typography.caption,
+        color: colors.primary,
+        fontWeight: "700",
+    },
+    suggestionDescription: {
+        ...typography.bodySmall,
+        color: colors.textSecondary,
+    },
+    suggestionSpecies: {
+        ...typography.caption,
+        color: colors.textMuted,
     },
     tagContainer: {
         flexDirection: "row",
