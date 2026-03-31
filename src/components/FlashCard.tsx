@@ -48,13 +48,9 @@ const FlashCard: React.FC<FlashCardProps> = ({
   const [flipped, setFlipped] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // For lookalike mode: pick a random image from the pool on mount
-  const resolvedImageUrl = useMemo(() => {
-    if (imageUrls && imageUrls.length > 0) {
-      return imageUrls[Math.floor(Math.random() * imageUrls.length)];
-    }
-    return imageUrl;
-  }, [imageUrl, imageUrls]);
+  // Use the pre-assigned image URL — for lookalike mode the unique
+  // photo is already picked at deck-creation time in new-game.tsx.
+  const resolvedImageUrl = imageUrl;
 
   const frontRotation = flipAnim.interpolate({
     inputRange: [0, 180],
