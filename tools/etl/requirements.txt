@@ -1,6 +1,6 @@
 azure-cosmos==4.9.*
 pandas==2.2.*
-requests==2.32.*
+requests==2.33.*
 boto3==1.36.*
 python-dotenv==1.2.*
 tqdm==4.67.*
