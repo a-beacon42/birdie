@@ -14,40 +14,51 @@
 </head>
 <body>
     <h1>Birdie — Privacy Policy</h1>
-    <p class="updated">Last updated: February 2026</p>
+    <p class="updated">Last updated: May 2026</p>
 
     <h2>Overview</h2>
-    <p>Birdie is a bird identification flashcard app. We are committed to protecting your privacy. This policy explains what data we collect and how we use it.</p>
+    <p>Birdie is a bird identification flashcard app. This policy explains what data we collect, how we use it, and the choices you have. You can play Birdie without creating an account; some features described below are only available when you choose to register.</p>
 
     <h2>Data We Collect</h2>
     <ul>
-        <li><strong>No user accounts.</strong> Birdie does not require registration or login.</li>
-        <li><strong>No personal information.</strong> We do not collect names, email addresses, or other personally identifiable information.</li>
-        <li><strong>Game preferences.</strong> Your filter selections (region, card count, difficulty) are stored locally on your device only.</li>
-        <li><strong>AI Chat.</strong> When you use the "Ask AI" feature, your messages are forwarded to Azure OpenAI to generate responses. Messages are not stored on our servers after the response is returned.</li>
+        <li><strong>Account information (optional).</strong> If you create an account, we collect your email address and a password. Your password is stored only as a secure one-way hash, and your email address is encrypted at rest. We use your email to identify your account and to let you sign in.</li>
+        <li><strong>Gameplay data (when signed in).</strong> When you are logged in, your game sessions, scores, saved decks, and statistics are stored on our servers and associated with your account so you can track your progress. If you are not signed in, this data is not stored on our servers.</li>
+        <li><strong>Game preferences.</strong> Your filter selections (region, card count, difficulty) are stored locally on your device.</li>
+        <li><strong>AI Chat.</strong> When you use the "Ask AI" feature, your message is sent to our server and forwarded to Azure OpenAI to generate a response. We do not retain the contents of these messages after the response is returned.</li>
+        <li><strong>Crash diagnostics.</strong> We collect anonymous crash and error reports to improve app stability. These reports do not include your email address or message contents.</li>
     </ul>
+
+    <h2>How We Use Your Data</h2>
+    <ul>
+        <li>To provide core features such as saving decks and syncing your statistics across devices.</li>
+        <li>To authenticate you and keep your account secure.</li>
+        <li>To answer your questions in the AI chat feature.</li>
+        <li>To diagnose crashes and improve the app.</li>
+    </ul>
+    <p>We do not sell your personal information, and we do not use your data to track you across other companies' apps or websites.</p>
 
     <h2>Third-Party Services</h2>
     <ul>
-        <li><strong>eBird API</strong> (Cornell Lab of Ornithology) — used for regional bird data and taxonomy.</li>
-        <li><strong>Azure OpenAI</strong> (Microsoft) — used for the AI chat feature.</li>
-        <li><strong>iNaturalist / Wikimedia Commons</strong> — bird photos sourced under Creative Commons licenses.</li>
+        <li><strong>Microsoft Azure</strong> — hosts our backend and database, and provides the Azure OpenAI service used for the AI chat feature.</li>
+        <li><strong>eBird API</strong> (Cornell Lab of Ornithology) — regional bird data and taxonomy.</li>
+        <li><strong>iNaturalist / Wikimedia Commons</strong> — bird photos under Creative Commons licenses.</li>
         <li><strong>Xeno-canto</strong> — bird audio recordings under Creative Commons licenses.</li>
+        <li><strong>Sentry</strong> — anonymous crash and error reporting.</li>
     </ul>
 
-    <h2>Analytics &amp; Crash Reporting</h2>
-    <p>Birdie may collect anonymous crash reports to improve app stability. No personal data is included in these reports.</p>
+    <h2>Data Storage &amp; Security</h2>
+    <p>Account data is stored on Microsoft Azure. Passwords are hashed with bcrypt and email addresses are encrypted at rest using AES-256-GCM. Game preferences remain on your device.</p>
 
-    <h2>Data Storage</h2>
-    <p>All game state is stored locally on your device. No user data is stored on our servers.</p>
+    <h2>Data Retention &amp; Deletion</h2>
+    <p>You can permanently delete your account at any time from <strong>Account → Delete Account</strong> in the app. Deleting your account removes your email address, saved decks, game sessions, and statistics from our servers. This action cannot be undone.</p>
 
     <h2>Children's Privacy</h2>
-    <p>Birdie is suitable for all ages. We do not knowingly collect any personal information from children.</p>
+    <p>Birdie is suitable for all ages. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal information, please contact us so we can remove it.</p>
 
     <h2>Changes to This Policy</h2>
     <p>We may update this policy from time to time. Changes will be reflected in the "Last updated" date above.</p>
 
     <h2>Contact</h2>
-    <p>If you have questions about this privacy policy, please open an issue on our <a href="https://github.com/alexbeacon/birdie">GitHub repository</a>.</p>
+    <p>If you have questions about this privacy policy, please open an issue on our <a href="https://github.com/a-beacon42/birdie">GitHub repository</a>.</p>
 </body>
 </html>
