@@ -83,7 +83,7 @@ birdie/
 ├─ app/                 # Expo Router screens (index, game)
 ├─ src/
 │  ├─ api/              # Axios API client
-│  ├─ components/       # Reusable UI (FlashCard, AudioPlayer, modals)
+│  ├─ components/       # Reusable UI (FlashCard, modals)
 │  ├─ hooks/            # Custom React hooks (useApi)
 │  ├─ stores/           # Zustand stores (game, preferences)
 │  ├─ types/            # TypeScript type definitions
