@@ -426,14 +426,17 @@ export const submitSession = async (
 export interface OverviewStats {
   life_list_count: number;
   total_species_available: number;
+  /** Fraction 0–1 of available species in the life list. Format with formatPct(). */
   life_list_pct: number;
   total_sessions: number;
   total_answers: number;
+  /** Fraction 0–1. Format with formatPct(). */
   overall_accuracy: number;
   current_streak: number;
   longest_streak: number;
   daily_practice_streak: number;
   games_this_week: number;
+  /** Fraction 0–1, accuracy change vs previous week. Format with formatPct(). */
   accuracy_delta_week: number;
 }
 

@@ -137,15 +137,15 @@ class OverviewStats(BaseModel):
 
     life_list_count: int
     total_species_available: int
-    life_list_pct: float
+    life_list_pct: float  # fraction 0–1 of available species in the life list
     total_sessions: int
     total_answers: int
-    overall_accuracy: float
+    overall_accuracy: float  # fraction 0–1
     current_streak: int  # consecutive correct
     longest_streak: int
     daily_practice_streak: int  # consecutive days with ≥1 game
     games_this_week: int
-    accuracy_delta_week: float  # accuracy change vs previous week
+    accuracy_delta_week: float  # fraction 0–1, accuracy change vs previous week
 
 
 class TrendPoint(BaseModel):

@@ -32,6 +32,7 @@ import {
     type SavedDeckSummary,
 } from "../../src/api/birdieApi";
 import { showAlert } from "../../src/utils/alert";
+import { formatPct } from "../../src/utils/format";
 import { buildLookalikeDeck } from "../../src/utils/lookalikes";
 
 /** How many saved decks to show on the home screen before "See all". */
@@ -297,12 +298,12 @@ function StatsCard({
                 <StatTile
                     label="Life List"
                     value={overview.life_list_count.toString()}
-                    sub={`${overview.life_list_pct.toFixed(0)}%`}
+                    sub={formatPct(overview.life_list_pct)}
                 />
                 <StatTile
                     label="Accuracy"
-                    value={`${overview.overall_accuracy.toFixed(0)}%`}
-                    sub={`${accuracyDeltaSign}${overview.accuracy_delta_week.toFixed(1)}% this week`}
+                    value={formatPct(overview.overall_accuracy)}
+                    sub={`${accuracyDeltaSign}${formatPct(overview.accuracy_delta_week)} this week`}
                     subColor={accuracyDeltaColor}
                 />
             </View>
