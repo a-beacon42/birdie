@@ -24,12 +24,14 @@ import {
     fetchSpeciesStats,
     fetchConfusions,
     fetchTrends,
+    fetchBirds,
     type OverviewStats,
     type SpeciesMastery,
     type ConfusionPair,
     type TrendsResponse,
 } from "../src/api/birdieApi";
 import { showAlert } from "../src/utils/alert";
+import { formatPct } from "../src/utils/format";
 
 type TabKey = "overview" | "species" | "confusions" | "trends";
 
@@ -46,6 +48,8 @@ export default function StatsScreen() {
     const [species, setSpecies] = useState<SpeciesMastery[]>([]);
     const [confusions, setConfusions] = useState<ConfusionPair[]>([]);
     const [trends, setTrends] = useState<TrendsResponse | null>(null);
+    // eBird species_code → common name, for display in the species/confusions tabs.
+    const [nameMap, setNameMap] = useState<Record<string, string>>({});
 
     const loadData = useCallback(async () => {
         try {
@@ -59,6 +63,30 @@ export default function StatsScreen() {
             setSpecies(sp);
             setConfusions(cf);
             setTrends(tr);
+
+            // Resolve the eBird codes shown in the species/confusions tabs to
+            // common names. Best-effort: on failure we fall back to the codes.
+            const codes = Array.from(
+                new Set([
+                    ...sp.map((s) => s.species_code),
+                    ...cf.flatMap((c) => [c.target_code, c.confused_with]),
+                ]),
+            );
+            if (codes.length > 0) {
+                try {
+                    const birds = await fetchBirds({
+                        species_codes: codes.join(","),
+                        limit: codes.length,
+                    });
+                    setNameMap(
+                        Object.fromEntries(
+                            birds.map((b) => [b.species_code, b.com_name]),
+                        ),
+                    );
+                } catch {
+                    // Non-fatal — codes will be shown instead of names.
+                }
+            }
         } catch (err: unknown) {
             showAlert("Error", err instanceof Error ? err.message : "Failed to load stats");
         } finally {
@@ -138,10 +166,10 @@ export default function StatsScreen() {
                             <OverviewTab overview={overview} />
                         )}
                         {activeTab === "species" && (
-                            <SpeciesTab species={species} />
+                            <SpeciesTab species={species} nameMap={nameMap} />
                         )}
                         {activeTab === "confusions" && (
-                            <ConfusionsTab confusions={confusions} />
+                            <ConfusionsTab confusions={confusions} nameMap={nameMap} />
                         )}
                         {activeTab === "trends" && trends && (
                             <TrendsTab trends={trends} />
@@ -166,7 +194,7 @@ function OverviewTab({ overview }: { overview: OverviewStats }) {
                 <Text style={cardStyles.cardTitle}>Life List</Text>
                 <Text style={cardStyles.bigNumber}>{overview.life_list_count}</Text>
                 <Text style={cardStyles.subText}>
-                    of {overview.total_species_available} species ({(overview.life_list_pct * 100).toFixed(1)}%)
+                    of {overview.total_species_available} species ({formatPct(overview.life_list_pct)})
                 </Text>
             </View>
 
@@ -174,10 +202,10 @@ function OverviewTab({ overview }: { overview: OverviewStats }) {
             <View style={cardStyles.card}>
                 <Text style={cardStyles.cardTitle}>Overall Accuracy</Text>
                 <Text style={cardStyles.bigNumber}>
-                    {(overview.overall_accuracy * 100).toFixed(1)}%
+                    {formatPct(overview.overall_accuracy)}
                 </Text>
                 <Text style={[cardStyles.subText, { color: deltaColor }]}>
-                    {deltaSign}{(overview.accuracy_delta_week * 100).toFixed(1)}% this week
+                    {deltaSign}{formatPct(overview.accuracy_delta_week)} this week
                 </Text>
             </View>
 
@@ -205,7 +233,13 @@ function MiniStat({ label, value }: { label: string; value: string | number }) {
 
 // --- Species Tab ---
 
-function SpeciesTab({ species }: { species: SpeciesMastery[] }) {
+function SpeciesTab({
+    species,
+    nameMap,
+}: {
+    species: SpeciesMastery[];
+    nameMap: Record<string, string>;
+}) {
     if (species.length === 0) {
         return (
             <View style={cardStyles.card}>
@@ -222,7 +256,9 @@ function SpeciesTab({ species }: { species: SpeciesMastery[] }) {
             {species.slice(0, 50).map((sp) => (
                 <View key={sp.species_code} style={speciesStyles.row}>
                     <View style={speciesStyles.info}>
-                        <Text style={speciesStyles.code}>{sp.species_code}</Text>
+                        <Text style={speciesStyles.name} numberOfLines={1}>
+                            {nameMap[sp.species_code] ?? sp.species_code}
+                        </Text>
                         <MasteryBadge mastery={sp.mastery} />
                     </View>
                     <View style={speciesStyles.stats}>
@@ -263,7 +299,13 @@ function MasteryBadge({ mastery }: { mastery: SpeciesMastery["mastery"] }) {
 
 // --- Confusions Tab ---
 
-function ConfusionsTab({ confusions }: { confusions: ConfusionPair[] }) {
+function ConfusionsTab({
+    confusions,
+    nameMap,
+}: {
+    confusions: ConfusionPair[];
+    nameMap: Record<string, string>;
+}) {
     if (confusions.length === 0) {
         return (
             <View style={cardStyles.card}>
@@ -281,9 +323,13 @@ function ConfusionsTab({ confusions }: { confusions: ConfusionPair[] }) {
                 <View key={`${pair.target_code}-${pair.confused_with}`} style={confusionStyles.row}>
                     <Text style={confusionStyles.rank}>#{i + 1}</Text>
                     <View style={confusionStyles.pair}>
-                        <Text style={confusionStyles.target}>{pair.target_code}</Text>
+                        <Text style={confusionStyles.target} numberOfLines={1}>
+                            {nameMap[pair.target_code] ?? pair.target_code}
+                        </Text>
                         <Text style={confusionStyles.arrow}>↔</Text>
-                        <Text style={confusionStyles.confused}>{pair.confused_with}</Text>
+                        <Text style={confusionStyles.confused} numberOfLines={1}>
+                            {nameMap[pair.confused_with] ?? pair.confused_with}
+                        </Text>
                     </View>
                     <Text style={confusionStyles.count}>{pair.occurrences}×</Text>
                 </View>
@@ -435,14 +481,16 @@ const speciesStyles = StyleSheet.create({
         borderBottomColor: colors.border,
     },
     info: {
+        flex: 1,
         flexDirection: "row",
         alignItems: "center",
         gap: spacing.sm,
+        marginRight: spacing.sm,
     },
-    code: {
+    name: {
         ...typography.label,
         color: colors.text,
-        minWidth: 70,
+        flexShrink: 1,
     },
     badge: {
         paddingHorizontal: 6,
@@ -489,6 +537,7 @@ const confusionStyles = StyleSheet.create({
     target: {
         ...typography.label,
         color: colors.text,
+        flexShrink: 1,
     },
     arrow: {
         ...typography.body,
@@ -497,6 +546,7 @@ const confusionStyles = StyleSheet.create({
     confused: {
         ...typography.label,
         color: colors.error,
+        flexShrink: 1,
     },
     count: {
         ...typography.label,

@@ -263,8 +263,10 @@ def get_overview(user_id: str) -> OverviewStats:
             total_correct += 1
 
     total_species = _count_total_species()
+    # Fraction 0–1 (formatted as a percentage client-side). Keeping the same
+    # unit as overall_accuracy / accuracy_delta_week so all three are consistent.
     life_list_pct = (
-        (len(correct_species) / total_species * 100) if total_species > 0 else 0.0
+        (len(correct_species) / total_species) if total_species > 0 else 0.0
     )
 
     # Streaks
@@ -298,7 +300,7 @@ def get_overview(user_id: str) -> OverviewStats:
     overview = OverviewStats(
         life_list_count=len(correct_species),
         total_species_available=total_species,
-        life_list_pct=round(life_list_pct, 2),
+        life_list_pct=round(life_list_pct, 4),
         total_sessions=len(sessions),
         total_answers=total_answers,
         overall_accuracy=round(

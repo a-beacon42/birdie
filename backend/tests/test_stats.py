@@ -382,6 +382,9 @@ class TestOverviewStats:
         assert overview.total_sessions == 1
         assert overview.total_answers == 3
         assert abs(overview.overall_accuracy - 2 / 3) < 0.01
+        # life_list_pct is a fraction 0–1 (2 of 500 species), not 0–100
+        assert overview.life_list_pct == round(2 / 500, 4)
+        assert 0.0 <= overview.life_list_pct <= 1.0
 
     def test_empty_overview(self, mock_containers):
         sessions, birds = mock_containers
@@ -394,6 +397,7 @@ class TestOverviewStats:
         assert overview.life_list_count == 0
         assert overview.total_sessions == 0
         assert overview.overall_accuracy == 0.0
+        assert overview.life_list_pct == 0.0
         assert overview.current_streak == 0
         assert overview.daily_practice_streak == 0
 
