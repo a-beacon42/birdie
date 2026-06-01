@@ -8,7 +8,7 @@
 import { create } from "zustand";
 import type { BirdSummary } from "../types/bird";
 
-export type QuizMode = "flashcard" | "multiple-choice" | "audio";
+export type QuizMode = "flashcard";
 export type AnswerResult = "correct" | "incorrect" | "skipped";
 
 export interface SessionAnswer {
@@ -51,7 +51,6 @@ interface GameState {
     recordAnswer: (cardId: string, speciesCode: string, result: AnswerResult, timeMs: number) => void;
     markUnansweredAsSkipped: () => void;
     clearAnswers: () => void;
-    setQuizMode: (mode: QuizMode) => void;
 
     // --- Derived ---
     currentBird: () => BirdSummary | null;
@@ -168,8 +167,6 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }));
             return { answers: [...state.answers, ...skipped] };
         }),
-
-    setQuizMode: (mode) => set({ quizMode: mode }),
 
     currentBird: () => {
         const { birds, currentIndex } = get();

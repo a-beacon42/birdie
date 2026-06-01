@@ -149,14 +149,7 @@ export default function GameScreen() {
         ? new Date(sessionStartedAt).toISOString()
         : now;
 
-      // Map quiz mode to backend format
-      const quizModeMap: Record<string, SessionCreatePayload["quiz_mode"]> = {
-        "flashcard": "flashcard",
-        "multiple-choice": "multiple_choice",
-        "audio": "audio",
-      };
-      const gameQuizMode = useGameStore.getState().quizMode;
-      const quizMode = quizModeMap[gameQuizMode] ?? "flashcard";
+      const quizMode: SessionCreatePayload["quiz_mode"] = "flashcard";
 
       const currentAnswers = useGameStore.getState().answers;
       const payload: SessionCreatePayload = {

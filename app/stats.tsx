@@ -310,7 +310,7 @@ function ConfusionsTab({
         return (
             <View style={cardStyles.card}>
                 <Text style={cardStyles.subText}>
-                    No confusion data yet. Play some multiple-choice games!
+                    No confusion data yet. Play more games to see which species you mix up!
                 </Text>
             </View>
         );
