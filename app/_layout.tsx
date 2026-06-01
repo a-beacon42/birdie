@@ -33,7 +33,7 @@ export default function RootLayout() {
         <ErrorBoundary>
             <GestureHandlerRootView style={{ flex: 1 }}>
                 <SafeAreaProvider>
-                    <StatusBar style="dark" />
+                    <StatusBar style="auto" />
                     {!isConnected && <OfflineBanner />}
                     <Stack screenOptions={stackScreenOptions}>
                         <Stack.Screen name="(tabs)" />
