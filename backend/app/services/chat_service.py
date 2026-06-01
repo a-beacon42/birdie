@@ -97,6 +97,7 @@ async def send_chat(bird_name: str, messages: list[dict]) -> dict:
     response = await client.chat.completions.create(
         model=settings.azure_openai_deployment_name,
         messages=full_messages,
+        max_tokens=250,
     )
 
     choice = response.choices[0] if response.choices else None
